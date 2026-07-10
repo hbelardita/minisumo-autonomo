@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "motors.h"
+#include "sensors.h"
 
 // TB6612FNG Pins
 extern const uint8_t STBY = 8;
@@ -11,28 +12,32 @@ extern const uint8_t BIN2 = 2;
 extern const uint8_t PWMB = 9;
 
 // HC-SR04 Pins
-constexpr uint8_t PIN_TRIG = 11;
-constexpr uint8_t PIN_ECHO = 12;
+extern const uint8_t PIN_TRIG = 11;
+extern const uint8_t PIN_ECHO = 12;
 
 // TCRT5000 Pins
-constexpr uint8_t PIN_TCRT_LEFT = A2;
-constexpr uint8_t PIN_TCRT_RIGHT = A3;
+extern const uint8_t PIN_TCRT_LEFT = A2;
+extern const uint8_t PIN_TCRT_RIGHT = A3;
 
 // UI Pins
-constexpr uint8_t PIN_BUTTON = 10;
-constexpr uint8_t PIN_LED = 13;
+extern const uint8_t PIN_BUTTON = 10;
+extern const uint8_t PIN_LED = 13;
 
 void setup() {
     pinMode(PIN_LED, OUTPUT);
-    pinMode(PIN_BUTTON, INPUT_PULLUP);
     digitalWrite(PIN_LED, LOW);
+    
     motorsInit();
+    sensorsInit();
 }
 
 void loop() {
-    // Test motor spin forward briefly
-    motorsSetSpeed(100, 100);
-    delay(500);
-    motorsBrake();
-    delay(1000);
+    // Test read
+    unsigned int dist = distanceRead();
+    if (dist > 0 && dist < 50) {
+        digitalWrite(PIN_LED, HIGH);
+    } else {
+        digitalWrite(PIN_LED, LOW);
+    }
+    delay(50);
 }
