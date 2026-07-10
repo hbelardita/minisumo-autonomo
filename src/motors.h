@@ -24,6 +24,9 @@ inline void motorsInit() {
 }
 
 inline void motorsSetSpeed(int leftSpeed, int rightSpeed) {
+    leftSpeed = constrain(leftSpeed, -255, 255);
+    rightSpeed = constrain(rightSpeed, -255, 255);
+
     digitalWrite(STBY, HIGH); // Enable driver
 
     // Left Motor (Motor A)
