@@ -23,21 +23,150 @@ extern const uint8_t PIN_TCRT_RIGHT = A3;
 extern const uint8_t PIN_BUTTON = 10;
 extern const uint8_t PIN_LED = 13;
 
+// Calibration Thresholds
+const int LINE_THRESHOLD = 400; // Low reading represents white line
+const unsigned int ATTACK_DISTANCE = 50; // Threshold in cm to trigger attack
+const unsigned long INITIAL_TACTIC_DURATION = 400; // Spin duration in ms
+
+// FSM States
+enum State {
+    STATE_STANDBY,
+    STATE_SAFETY_DELAY,
+    STATE_INITIAL_TACTIC,
+    STATE_SEARCH,
+    STATE_ATTACK,
+    STATE_EVADE_LEFT,
+    STATE_EVADE_RIGHT
+};
+
+State currentState = STATE_STANDBY;
+unsigned long stateStartTime = 0;
+unsigned long lastLedBlinkTime = 0;
+bool ledState = false;
+
+void transitionTo(State newState) {
+    currentState = newState;
+    stateStartTime = millis();
+}
+
 void setup() {
     pinMode(PIN_LED, OUTPUT);
     digitalWrite(PIN_LED, LOW);
     
     motorsInit();
     sensorsInit();
+    
+    transitionTo(STATE_STANDBY);
 }
 
 void loop() {
-    // Test read
-    unsigned int dist = distanceRead();
-    if (dist > 0 && dist < 50) {
-        digitalWrite(PIN_LED, HIGH);
-    } else {
-        digitalWrite(PIN_LED, LOW);
+    // Priority 1: Check Line Sensors (only if we are active in combat)
+    if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY) {
+        if (lineReadLeft() < LINE_THRESHOLD) {
+            transitionTo(STATE_EVADE_LEFT);
+        } else if (lineReadRight() < LINE_THRESHOLD) {
+            transitionTo(STATE_EVADE_RIGHT);
+        }
     }
-    delay(50);
+
+    // Priority 2: Execute State Behaviors
+    switch (currentState) {
+        case STATE_STANDBY:
+            motorsBrake();
+            digitalWrite(PIN_LED, LOW);
+            if (buttonPressed()) {
+                // Wait for debounce and button release
+                delay(150);
+                while (buttonPressed()) { /* wait */ }
+                transitionTo(STATE_SAFETY_DELAY);
+            }
+            break;
+
+        case STATE_SAFETY_DELAY:
+            motorsBrake();
+            // Blink LED at 5Hz (every 100ms)
+            if (millis() - lastLedBlinkTime >= 100) {
+                lastLedBlinkTime = millis();
+                ledState = !ledState;
+                digitalWrite(PIN_LED, ledState ? HIGH : LOW);
+            }
+
+            // After 5 seconds, start the match
+            if (millis() - stateStartTime >= 5000) {
+                digitalWrite(PIN_LED, HIGH); // Steady ON when active
+                transitionTo(STATE_INITIAL_TACTIC);
+            }
+            break;
+
+        case STATE_INITIAL_TACTIC:
+            // Spin clockwise looking for opponent
+            motorsSetSpeed(160, -160);
+
+            // Transition if opponent found
+            {
+                unsigned int dist = distanceRead();
+                if (dist > 0 && dist < ATTACK_DISTANCE) {
+                    transitionTo(STATE_ATTACK);
+                    break;
+                }
+            }
+
+            // Transition after timeout to standard search
+            if (millis() - stateStartTime >= INITIAL_TACTIC_DURATION) {
+                transitionTo(STATE_SEARCH);
+            }
+            break;
+
+        case STATE_SEARCH:
+            // Fast arc search sweep
+            motorsSetSpeed(120, -120);
+
+            // Check if opponent detected
+            {
+                unsigned int dist = distanceRead();
+                if (dist > 0 && dist < ATTACK_DISTANCE) {
+                    transitionTo(STATE_ATTACK);
+                }
+            }
+            break;
+
+        case STATE_ATTACK:
+            // Charge straight at 100% speed
+            motorsSetSpeed(255, 255);
+
+            // Check if opponent escaped
+            {
+                unsigned int dist = distanceRead();
+                if (dist == 0 || dist >= ATTACK_DISTANCE) {
+                    transitionTo(STATE_SEARCH);
+                }
+            }
+            break;
+
+        case STATE_EVADE_LEFT:
+            // White line on the left. Backup and turn right.
+            if (millis() - stateStartTime < 250) {
+                // Backup
+                motorsSetSpeed(-180, -180);
+            } else if (millis() - stateStartTime < 450) {
+                // Spin Right
+                motorsSetSpeed(180, -180);
+            } else {
+                transitionTo(STATE_SEARCH);
+            }
+            break;
+
+        case STATE_EVADE_RIGHT:
+            // White line on the right. Backup and turn left.
+            if (millis() - stateStartTime < 250) {
+                // Backup
+                motorsSetSpeed(-180, -180);
+            } else if (millis() - stateStartTime < 450) {
+                // Spin Left
+                motorsSetSpeed(-180, 180);
+            } else {
+                transitionTo(STATE_SEARCH);
+            }
+            break;
+    }
 }

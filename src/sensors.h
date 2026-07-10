@@ -33,7 +33,7 @@ inline unsigned int distanceRead() {
     if (duration == 0) {
         return 0; // No obstacle in range
     }
-    return duration * 0.0343 / 2.0;
+    return duration / 58;
 }
 
 inline int lineReadLeft() {
