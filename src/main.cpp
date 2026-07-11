@@ -2,6 +2,9 @@
 #include "motors.h"
 #include "sensors.h"
 
+
+// #define DEBUG_MOTORS
+
 // TB6612FNG Pins
 extern const uint8_t STBY = 8;
 extern const uint8_t AIN1 = 7;
@@ -66,14 +69,66 @@ void transitionTo(State newState) {
 void setup() {
     pinMode(PIN_LED, OUTPUT);
     digitalWrite(PIN_LED, LOW);
-    
+
     motorsInit();
     sensorsInit();
-    
+
+#ifdef DEBUG_MOTORS
+    Serial.begin(115200);
+    while (!Serial) { ; }
+    Serial.println("--- MODO DEBUG DE MOTORES HABILITADO ---");
+    Serial.println("Envia comandos por Serial:");
+    Serial.println("  f : Adelante (Forward)");
+    Serial.println("  b : Atrás (Backward)");
+    Serial.println("  l : Girar Izquierda (Left)");
+    Serial.println("  r : Girar Derecha (Right)");
+    Serial.println("  s : Frenar (Stop)");
+#endif
+
     transitionTo(STATE_STANDBY);
 }
 
 void loop() {
+#ifdef DEBUG_MOTORS
+    if (Serial.available() > 0) {
+        char cmd = Serial.read();
+        if (cmd != '\r' && cmd != '\n') {
+            switch (cmd) {
+                case 'f':
+                case 'F':
+                    Serial.println("Comando: Adelante");
+                    motorsSetSpeed(200, 200);
+                    break;
+                case 'b':
+                case 'B':
+                    Serial.println("Comando: Atrás");
+                    motorsSetSpeed(-200, -200);
+                    break;
+                case 'l':
+                case 'L':
+                    Serial.println("Comando: Izquierda");
+                    motorsSetSpeed(-200, 200);
+                    break;
+                case 'r':
+                case 'R':
+                    Serial.println("Comando: Derecha");
+                    motorsSetSpeed(200, -200);
+                    break;
+                case 's':
+                case 'S':
+                    Serial.println("Comando: Frenar");
+                    motorsBrake();
+                    break;
+                default:
+                    Serial.print("Comando no reconocido: ");
+                    Serial.println(cmd);
+                    break;
+            }
+        }
+    }
+    return; // Evita ejecutar el bucle de la máquina de estados de combate
+#endif
+
     // Priority 1: Check Line Sensors (only if we are active in combat)
     if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY) {
         if (lineReadLeft() < LINE_THRESHOLD && currentState != STATE_EVADE_LEFT && currentState != STATE_EVADE_RIGHT) {
