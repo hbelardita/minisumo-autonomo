@@ -36,12 +36,27 @@ inline unsigned int distanceRead() {
     return duration / 58;
 }
 
-inline int lineReadLeft() {
-    return analogRead(PIN_TCRT_LEFT);
+inline bool readLineSensor(uint8_t pin, int &consecutiveCount) {
+    if (digitalRead(pin) == LOW) {
+        consecutiveCount++;
+        if (consecutiveCount >= 4) {
+            consecutiveCount = 4;
+            return true;
+        }
+    } else {
+        consecutiveCount = 0;
+    }
+    return false;
 }
 
-inline int lineReadRight() {
-    return analogRead(PIN_TCRT_RIGHT);
+inline bool lineReadLeft() {
+    static int consecutiveLow = 0;
+    return readLineSensor(PIN_TCRT_LEFT, consecutiveLow);
+}
+
+inline bool lineReadRight() {
+    static int consecutiveLow = 0;
+    return readLineSensor(PIN_TCRT_RIGHT, consecutiveLow);
 }
 
 inline bool buttonPressed() {

@@ -27,7 +27,6 @@ extern const uint8_t PIN_BUTTON = 10;
 extern const uint8_t PIN_LED = 13;
 
 // Calibration Thresholds
-const int LINE_THRESHOLD = 400; // Low reading represents white line
 const unsigned int ATTACK_DISTANCE = 50; // Threshold in cm to trigger attack
 const unsigned long INITIAL_TACTIC_DURATION = 400; // Spin duration in ms
 
@@ -131,9 +130,9 @@ void loop() {
 
     // Priority 1: Check Line Sensors (only if we are active in combat)
     if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY) {
-        if (lineReadLeft() < LINE_THRESHOLD && currentState != STATE_EVADE_LEFT && currentState != STATE_EVADE_RIGHT) {
+        if (lineReadLeft() && currentState != STATE_EVADE_LEFT && currentState != STATE_EVADE_RIGHT) {
             transitionTo(STATE_EVADE_LEFT);
-        } else if (lineReadRight() < LINE_THRESHOLD && currentState != STATE_EVADE_RIGHT && currentState != STATE_EVADE_LEFT) {
+        } else if (lineReadRight() && currentState != STATE_EVADE_RIGHT && currentState != STATE_EVADE_LEFT) {
             transitionTo(STATE_EVADE_RIGHT);
         }
     }
