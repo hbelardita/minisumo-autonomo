@@ -38,6 +38,7 @@ const unsigned long EVADE_TOTAL_DURATION = 450;
 const int INITIAL_TACTIC_SPEED = 160;
 const int SEARCH_SPEED = 120;
 const int ATTACK_SPEED = 255;
+const unsigned long ATTACK_PERSIST_DURATION = 200;
 const unsigned long SAFETY_DELAY_DURATION = 5000;
 const unsigned long LED_BLINK_INTERVAL = 100;
 
@@ -130,9 +131,13 @@ void loop() {
 
     // Priority 1: Check Line Sensors (only if we are active in combat)
     if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY) {
-        if (lineReadLeft() && currentState != STATE_EVADE_LEFT && currentState != STATE_EVADE_RIGHT) {
+        // Leemos SIEMPRE ambos sensores para no romper el debounce por el short-circuit del if
+        bool leftLine = lineReadLeft();
+        bool rightLine = lineReadRight();
+
+        if (leftLine && currentState != STATE_EVADE_LEFT && currentState != STATE_EVADE_RIGHT) {
             transitionTo(STATE_EVADE_LEFT);
-        } else if (lineReadRight() && currentState != STATE_EVADE_RIGHT && currentState != STATE_EVADE_LEFT) {
+        } else if (rightLine && currentState != STATE_EVADE_RIGHT && currentState != STATE_EVADE_LEFT) {
             transitionTo(STATE_EVADE_RIGHT);
         }
     }
@@ -205,8 +210,19 @@ void loop() {
             // Check if opponent escaped
             {
                 unsigned int dist = distanceRead();
-                if (dist == 0 || dist >= ATTACK_DISTANCE) {
-                    transitionTo(STATE_SEARCH);
+                static unsigned long timeLost = 0;
+                
+                if (dist > 0 && dist < ATTACK_DISTANCE) {
+                    timeLost = 0; // Lo vemos claro, reseteamos el timeout
+                } else {
+                    // Lo perdimos de vista (dist == 0 por estar muy cerca, o se fue)
+                    if (timeLost == 0) {
+                        timeLost = millis(); // Empezamos a contar
+                    } else if (millis() - timeLost > ATTACK_PERSIST_DURATION) {
+                        // Pasó el tiempo de persistencia sin verlo, volvemos a buscar
+                        transitionTo(STATE_SEARCH);
+                        timeLost = 0;
+                    }
                 }
             }
             break;

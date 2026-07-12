@@ -9,6 +9,8 @@ extern const uint8_t PIN_TCRT_LEFT;
 extern const uint8_t PIN_TCRT_RIGHT;
 extern const uint8_t PIN_BUTTON;
 
+const unsigned long ULTRASONIC_TIMEOUT = 3500;
+
 inline void sensorsInit() {
     pinMode(PIN_TRIG, OUTPUT);
     pinMode(PIN_ECHO, INPUT);
@@ -28,8 +30,9 @@ inline unsigned int distanceRead() {
     delayMicroseconds(10);
     digitalWrite(PIN_TRIG, LOW);
 
-    // Read pulse duration with a 6000 microsecond limit (~100cm max range)
-    unsigned long duration = pulseIn(PIN_ECHO, HIGH, 6000);
+    // Read pulse duration
+    // Reduce el tiempo bloqueante y es suficiente para un dohyo de 77cm.
+    unsigned long duration = pulseIn(PIN_ECHO, HIGH, ULTRASONIC_TIMEOUT);
     if (duration == 0) {
         return 0; // No obstacle in range
     }
