@@ -28,6 +28,10 @@ The project will be organized as follows:
 - **Problem**: Motor pins (`STBY`, `AIN1`, etc.) lack the `PIN_` prefix, unlike sensor/UI pins (`PIN_TRIG`, `PIN_ECHO`).
 - **Solution**: Add the `PIN_` prefix to all motor driver pins (e.g. `PIN_STBY`, `PIN_AIN1`, `PIN_AIN2`, `PIN_PWMA`, `PIN_BIN1`, `PIN_BIN2`, `PIN_PWMB`).
 
+### D. Code Comments Language
+- **Requirement**: The user explicitly requested that all generated code comments in header and source files must be in Spanish.
+- **Solution**: Unify and write all code comments inside `src/config.h`, `src/motors.h`, `src/motors.cpp`, `src/sensors.h`, `src/sensors.cpp`, and `src/main.cpp` in Spanish.
+
 ---
 
 ## 4. Module Specifications
