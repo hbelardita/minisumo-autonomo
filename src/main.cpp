@@ -1,46 +1,37 @@
 #include <Arduino.h>
+#include "config.h"
 #include "motors.h"
 #include "sensors.h"
 
 
 // #define DEBUG_MOTORS
 
-// TB6612FNG Pins
-extern const uint8_t STBY = 8;
-extern const uint8_t AIN1 = 7;
-extern const uint8_t AIN2 = 6;
-extern const uint8_t PWMA = 5;
-extern const uint8_t BIN1 = 4;
-extern const uint8_t BIN2 = 2;
-extern const uint8_t PWMB = 9;
+// Definiciones de pines de hardware declaradas en config.h
+const uint8_t PIN_STBY = 8;
+const uint8_t PIN_AIN1 = 7;
+const uint8_t PIN_AIN2 = 6;
+const uint8_t PIN_PWMA = 5;
+const uint8_t PIN_BIN1 = 4;
+const uint8_t PIN_BIN2 = 2;
+const uint8_t PIN_PWMB = 9;
 
-// HC-SR04 Pins
-extern const uint8_t PIN_TRIG = 11;
-extern const uint8_t PIN_ECHO = 12;
+const uint8_t PIN_TRIG = 11;
+const uint8_t PIN_ECHO = 12;
 
-// TCRT5000 Pins
-extern const uint8_t PIN_TCRT_LEFT = A2;
-extern const uint8_t PIN_TCRT_RIGHT = A3;
+const uint8_t PIN_TCRT_LEFT = A2;
+const uint8_t PIN_TCRT_RIGHT = A3;
 
-// UI Pins
-extern const uint8_t PIN_BUTTON = 10;
-extern const uint8_t PIN_LED = 13;
+const uint8_t PIN_BUTTON = 10;
+const uint8_t PIN_LED = 13;
 
-// Calibration Thresholds
-const unsigned int ATTACK_DISTANCE = 50; // Threshold in cm to trigger attack
-const unsigned long TACTIC_MS = 400; // Spin duration in ms
-
-// FSM Configuration Constants
-const int EVADE_BACKUP_SPEED = -180;
-const int EVADE_SPIN_SPEED = 180;
-const unsigned long BACKUP_MS = 250;
-const unsigned long EVADE_MS = 450;
-const int INITIAL_TACTIC_SPEED = 160;
-const int SEARCH_SPEED = 120;
-const int ATTACK_SPEED = 255;
-const unsigned long PERSIST_MS = 200;
-const unsigned long SAFETY_MS = 5000;
-const unsigned long BLINK_MS = 100;
+// Compatibilidad temporal con motors.h antes de la Tarea 2
+const uint8_t STBY = PIN_STBY;
+const uint8_t AIN1 = PIN_AIN1;
+const uint8_t AIN2 = PIN_AIN2;
+const uint8_t PWMA = PIN_PWMA;
+const uint8_t BIN1 = PIN_BIN1;
+const uint8_t BIN2 = PIN_BIN2;
+const uint8_t PWMB = PIN_PWMB;
 
 // FSM States
 enum State {

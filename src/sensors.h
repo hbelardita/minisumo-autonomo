@@ -9,7 +9,7 @@ extern const uint8_t PIN_TCRT_LEFT;
 extern const uint8_t PIN_TCRT_RIGHT;
 extern const uint8_t PIN_BUTTON;
 
-const unsigned long ULTRASONIC_TIMEOUT = 3500;
+#include "config.h"
 
 inline void sensorsInit() {
     pinMode(PIN_TRIG, OUTPUT);
