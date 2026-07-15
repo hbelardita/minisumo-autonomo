@@ -3,10 +3,7 @@
 #include "motors.h"
 #include "sensors.h"
 
-
-// #define DEBUG_MOTORS
-
-// Definiciones de pines de hardware declaradas en config.h
+// Mapeo físico de pines (definidos en config.h)
 const uint8_t PIN_STBY = 8;
 const uint8_t PIN_AIN1 = 7;
 const uint8_t PIN_AIN2 = 6;
@@ -24,16 +21,7 @@ const uint8_t PIN_TCRT_RIGHT = A3;
 const uint8_t PIN_BUTTON = 10;
 const uint8_t PIN_LED = 13;
 
-// Compatibilidad temporal con motors.h antes de la Tarea 2
-const uint8_t STBY = PIN_STBY;
-const uint8_t AIN1 = PIN_AIN1;
-const uint8_t AIN2 = PIN_AIN2;
-const uint8_t PWMA = PIN_PWMA;
-const uint8_t BIN1 = PIN_BIN1;
-const uint8_t BIN2 = PIN_BIN2;
-const uint8_t PWMB = PIN_PWMB;
-
-// FSM States
+// Estados de la máquina de estados finitos (FSM)
 enum State {
     STATE_STANDBY,
     STATE_SAFETY_DELAY,
@@ -47,9 +35,18 @@ enum State {
 State currentState = STATE_STANDBY;
 unsigned long stateStartTime = 0;
 
+// Temporizador para persistencia de ataque (corregido de static local a global de archivo)
+static unsigned long timeLost = 0;
+
+// Realiza la transición de estado y registra el tiempo de inicio
 void transitionTo(State newState) {
     currentState = newState;
     stateStartTime = millis();
+    
+    // CORRECCIÓN: Se limpia el temporizador de pérdida al entrar en estado de ataque
+    if (newState == STATE_ATTACK) {
+        timeLost = 0;
+    }
 }
 
 void setup() {
@@ -112,12 +109,12 @@ void loop() {
             }
         }
     }
-    return; // Evita ejecutar el bucle de la máquina de estados de combate
+    return; // Evita el bucle de la máquina de estados si estamos en debug
 #endif
 
-    // Priority 1: Check Line Sensors (only if we are active in combat)
+    // Prioridad 1: Detección de sensores de línea blanca (solo activos en combate)
     if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY) {
-        // Leemos SIEMPRE ambos sensores para no romper el debounce por el short-circuit del if
+        // Leemos siempre ambos para no romper el debounce estático
         bool leftLine = lineReadLeft();
         bool rightLine = lineReadRight();
 
@@ -128,36 +125,37 @@ void loop() {
         }
     }
 
-    // Priority 2: Execute State Behaviors
+    // Prioridad 2: Comportamientos de cada estado
     switch (currentState) {
         case STATE_STANDBY:
-            motorsBrake();
+            // CORRECCIÓN: Se apaga el driver (Standby) en vez de frenar activamente
+            motorsStandby();
             digitalWrite(PIN_LED, LOW);
             if (buttonPressed()) {
-                // Wait for debounce and button release
+                // Espera antirrebote y liberación de botón
                 delay(150);
-                while (buttonPressed()) { /* wait */ }
+                while (buttonPressed()) { /* esperar */ }
                 transitionTo(STATE_SAFETY_DELAY);
             }
             break;
 
         case STATE_SAFETY_DELAY:
             motorsBrake();
-            // Blink LED at 5Hz (every 100ms)
+            // Parpadea el LED a 5Hz durante la cuenta regresiva
             digitalWrite(PIN_LED, ((millis() - stateStartTime) / BLINK_MS) % 2 ? HIGH : LOW);
 
-            // After 5 seconds, start the match
+            // Al cumplirse los 5 segundos, inicia el combate
             if (millis() - stateStartTime >= SAFETY_MS) {
-                digitalWrite(PIN_LED, HIGH); // Steady ON when active
+                digitalWrite(PIN_LED, HIGH); // LED encendido fijo durante combate
                 transitionTo(STATE_INITIAL_TACTIC);
             }
             break;
 
         case STATE_INITIAL_TACTIC:
-            // Spin clockwise looking for opponent
+            // Giro inicial horario a velocidad táctica
             motorsSetSpeed(INITIAL_TACTIC_SPEED, -INITIAL_TACTIC_SPEED);
 
-            // Transition if opponent found
+            // Transiciona si detecta oponente en frente
             {
                 unsigned int dist = distanceRead();
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
@@ -166,17 +164,17 @@ void loop() {
                 }
             }
 
-            // Transition after timeout to standard search
+            // Pasa a búsqueda estándar si se agota el tiempo de la táctica
             if (millis() - stateStartTime >= TACTIC_MS) {
                 transitionTo(STATE_SEARCH);
             }
             break;
 
         case STATE_SEARCH:
-            // Fast arc search sweep
+            // Giro de búsqueda constante sobre el eje
             motorsSetSpeed(SEARCH_SPEED, -SEARCH_SPEED);
 
-            // Check if opponent detected
+            // Transiciona si detecta oponente
             {
                 unsigned int dist = distanceRead();
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
@@ -186,22 +184,21 @@ void loop() {
             break;
 
         case STATE_ATTACK:
-            // Charge straight at 100% speed
+            // Carga directa al 100% de velocidad
             motorsSetSpeed(ATTACK_SPEED, ATTACK_SPEED);
 
-            // Check if opponent escaped
+            // Comprobación de escape del oponente
             {
                 unsigned int dist = distanceRead();
-                static unsigned long timeLost = 0;
                 
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
-                    timeLost = 0; // Lo vemos claro, reseteamos el timeout
+                    timeLost = 0; // Vemos al rival claro, reseteamos contador de pérdida
                 } else {
-                    // Lo perdimos de vista (dist == 0 por estar muy cerca, o se fue)
+                    // Si perdemos contacto visual
                     if (timeLost == 0) {
-                        timeLost = millis(); // Empezamos a contar
+                        timeLost = millis(); // Inicia cuenta de persistencia
                     } else if (millis() - timeLost > PERSIST_MS) {
-                        // Pasó el tiempo de persistencia sin verlo, volvemos a buscar
+                        // Vuelve a buscar si pasa el tiempo de persistencia
                         transitionTo(STATE_SEARCH);
                         timeLost = 0;
                     }
@@ -210,12 +207,10 @@ void loop() {
             break;
 
         case STATE_EVADE_LEFT:
-            // White line on the left. Backup and turn right.
+            // Línea blanca detectada en la izquierda: retrocede y gira a la derecha
             if (millis() - stateStartTime < BACKUP_MS) {
-                // Backup
                 motorsSetSpeed(EVADE_BACKUP_SPEED, EVADE_BACKUP_SPEED);
             } else if (millis() - stateStartTime < EVADE_MS) {
-                // Spin Right
                 motorsSetSpeed(EVADE_SPIN_SPEED, -EVADE_SPIN_SPEED);
             } else {
                 transitionTo(STATE_SEARCH);
@@ -223,12 +218,10 @@ void loop() {
             break;
 
         case STATE_EVADE_RIGHT:
-            // White line on the right. Backup and turn left.
+            // Línea blanca detectada en la derecha: retrocede y gira a la izquierda
             if (millis() - stateStartTime < BACKUP_MS) {
-                // Backup
                 motorsSetSpeed(EVADE_BACKUP_SPEED, EVADE_BACKUP_SPEED);
             } else if (millis() - stateStartTime < EVADE_MS) {
-                // Spin Left
                 motorsSetSpeed(-EVADE_SPIN_SPEED, EVADE_SPIN_SPEED);
             } else {
                 transitionTo(STATE_SEARCH);
