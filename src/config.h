@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// #define DEBUG_MOTORS // Se habilita mediante build_flags en platformio.ini
 #include <Arduino.h>
 
 // Pines del Driver de Motores (TB6612FNG)

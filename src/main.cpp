@@ -42,7 +42,7 @@ static unsigned long timeLost = 0;
 void transitionTo(State newState) {
     currentState = newState;
     stateStartTime = millis();
-    
+
     // CORRECCIÓN: Se limpia el temporizador de pérdida al entrar en estado de ataque
     if (newState == STATE_ATTACK) {
         timeLost = 0;
@@ -57,7 +57,7 @@ void setup() {
     sensorsInit();
 
 #ifdef DEBUG_MOTORS
-    Serial.begin(115200);
+    Serial.begin(9600);
     while (!Serial) { ; }
     Serial.println("--- MODO DEBUG DE MOTORES HABILITADO ---");
     Serial.println("Envia comandos por Serial:");
@@ -76,6 +76,8 @@ void loop() {
     if (Serial.available() > 0) {
         char cmd = Serial.read();
         if (cmd != '\r' && cmd != '\n') {
+            Serial.print("> Recibido: ");
+            Serial.println(cmd);
             switch (cmd) {
                 case 'f':
                 case 'F':
@@ -190,7 +192,7 @@ void loop() {
             // Comprobación de escape del oponente
             {
                 unsigned int dist = distanceRead();
-                
+
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     timeLost = 0; // Vemos al rival claro, reseteamos contador de pérdida
                 } else {

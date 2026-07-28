@@ -19,12 +19,12 @@ void motorsInit() {
 static void setMotor(uint8_t in1, uint8_t in2, uint8_t pwm, int speed) {
     speed = constrain(speed, -255, 255);
     if (speed > 0) {
-        digitalWrite(in1, HIGH);
-        digitalWrite(in2, LOW);
-        analogWrite(pwm, speed);
-    } else if (speed < 0) {
         digitalWrite(in1, LOW);
         digitalWrite(in2, HIGH);
+        analogWrite(pwm, speed);
+    } else if (speed < 0) {
+        digitalWrite(in1, HIGH);
+        digitalWrite(in2, LOW);
         analogWrite(pwm, -speed);
     } else {
         digitalWrite(in1, LOW);
