@@ -13,7 +13,7 @@ void sensorsInit() {
 }
 
 // Envía un pulso ultrasónico y mide el tiempo de respuesta
-unsigned int distanceRead() {
+unsigned int opponentDistanceRead() {
     // Genera pulso de disparo de 10us
     digitalWrite(PIN_TRIG, LOW);
     delayMicroseconds(2);
@@ -37,13 +37,13 @@ static bool readLineSensor(uint8_t pin, int &count) {
 }
 
 // Lectura con debounce del sensor izquierdo
-bool lineReadLeft() {
+bool borderReadLeft() {
     static int count = 0;
     return readLineSensor(PIN_TCRT_LEFT, count);
 }
 
 // Lectura con debounce del sensor derecho
-bool lineReadRight() {
+bool borderReadRight() {
     static int count = 0;
     return readLineSensor(PIN_TCRT_RIGHT, count);
 }

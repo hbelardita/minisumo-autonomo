@@ -33,11 +33,11 @@ struct DomainConfig {
     unsigned long persistMs = 200;      // Charge persistence time without seeing the opponent (PERSIST_MS)
     unsigned long blinkMs = 100;        // LED blinking semiperiod at 5Hz (BLINK_MS)
 
-    int backupSpeed = -180;             // Backup speed in recovery (EVADE_BACKUP_SPEED)
-    int spinSpeed = 180;                // Spin speed in recovery (EVADE_SPIN_SPEED)
-    int openingMoveSpeed = 160;         // Initial opening move spin speed (INITIAL_OPENING_MOVE_SPEED)
+    int backupSpeed = -180;             // Backup speed in recovery (RECOVERY_BACKUP_SPEED)
+    int spinSpeed = 180;                // Spin speed in recovery (RECOVERY_SPIN_SPEED)
+    int openingMoveSpeed = 160;         // Initial opening move spin speed (OPENING_MOVE_SPEED)
     int searchSpeed = 120;              // Search speed (SEARCH_SPEED)
-    int chargeSpeed = 255;              // Attack/charge speed (ATTACK_SPEED)
+    int chargeSpeed = 255;              // Charge speed (CHARGE_SPEED)
 };
 
 /**
@@ -103,6 +103,13 @@ private:
      * @param currentTimeMs Timestamp of the event.
      */
     void transitionTo(State newState, unsigned long currentTimeMs);
+
+    /**
+     * @brief Checks if a border is detected and transitions to RECOVERY.
+     * @param inputs Current sensor inputs.
+     * @return true if border was detected and transition occurred.
+     */
+    bool checkBorderTransition(const DomainInputs& inputs);
 };
 
 #endif // DOMAIN_ENGINE_H

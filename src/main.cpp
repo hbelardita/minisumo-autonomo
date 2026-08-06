@@ -24,18 +24,18 @@ const uint8_t PIN_LED = 13;
 
 DomainConfig buildDomainConfig() {
     DomainConfig cfg;
-    cfg.countdownMs = SAFETY_MS;
-    cfg.openingMoveMs = TACTIC_MS;
-    cfg.backupMs = BACKUP_MS;
-    cfg.recoveryMs = EVADE_MS; // Total recovery time
+    cfg.countdownMs = COUNTDOWN_MS;
+    cfg.openingMoveMs = OPENING_MOVE_MS;
+    cfg.backupMs = RECOVERY_BACKUP_MS;
+    cfg.recoveryMs = RECOVERY_MS; // Total recovery time
     cfg.persistMs = PERSIST_MS;
     cfg.blinkMs = BLINK_MS;
     
-    cfg.backupSpeed = EVADE_BACKUP_SPEED;
-    cfg.spinSpeed = EVADE_SPIN_SPEED;
-    cfg.openingMoveSpeed = INITIAL_TACTIC_SPEED;
+    cfg.backupSpeed = RECOVERY_BACKUP_SPEED;
+    cfg.spinSpeed = RECOVERY_SPIN_SPEED;
+    cfg.openingMoveSpeed = OPENING_MOVE_SPEED;
     cfg.searchSpeed = SEARCH_SPEED;
-    cfg.chargeSpeed = ATTACK_SPEED;
+    cfg.chargeSpeed = CHARGE_SPEED;
     return cfg;
 }
 
@@ -124,14 +124,14 @@ void loop() {
     if (currentEngineState == State::OPENING_MOVE || 
         currentEngineState == State::SEARCH || 
         currentEngineState == State::CHARGE) {
-        unsigned int dist = distanceRead();
+        unsigned int dist = opponentDistanceRead();
         inputs.opponentDetected = (dist > 0 && dist < ATTACK_DISTANCE);
     }
 
     // Reading of the line sensors (inactive in STANDBY)
     if (currentEngineState != State::STANDBY) {
-        inputs.leftBorderDetected = lineReadLeft();
-        inputs.rightBorderDetected = lineReadRight();
+        inputs.leftBorderDetected = borderReadLeft();
+        inputs.rightBorderDetected = borderReadRight();
     }
 
     // Updates the FSM and obtains the desired outputs

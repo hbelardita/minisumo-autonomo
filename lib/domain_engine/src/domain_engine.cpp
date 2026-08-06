@@ -15,6 +15,19 @@ void DomainEngine::transitionTo(State newState, unsigned long currentTimeMs) {
     }
 }
 
+bool DomainEngine::checkBorderTransition(const DomainInputs& inputs) {
+    if (inputs.leftBorderDetected || inputs.rightBorderDetected) {
+        if (inputs.leftBorderDetected) {
+            recoverySpinLeft = false;
+        } else {
+            recoverySpinLeft = true;
+        }
+        transitionTo(State::RECOVERY, inputs.currentTimeMs);
+        return true;
+    }
+    return false;
+}
+
 DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
     // 1. FSM state transitions handling
     switch (currentState) {
@@ -33,16 +46,11 @@ DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
         }
         case State::OPENING_MOVE: {
             // Priority 1: Border detection
-            if (inputs.leftBorderDetected || inputs.rightBorderDetected) {
-                if (inputs.leftBorderDetected) {
-                    recoverySpinLeft = false;
-                } else {
-                    recoverySpinLeft = true;
-                }
-                transitionTo(State::RECOVERY, inputs.currentTimeMs);
+            if (checkBorderTransition(inputs)) {
+                break;
             }
             // Priority 2: Opponent detection
-            else if (inputs.opponentDetected) {
+            if (inputs.opponentDetected) {
                 transitionTo(State::CHARGE, inputs.currentTimeMs);
             }
             // Priority 3: Initial opening move time expiration
@@ -53,43 +61,31 @@ DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
         }
         case State::SEARCH: {
             // Priority 1: Border detection
-            if (inputs.leftBorderDetected || inputs.rightBorderDetected) {
-                if (inputs.leftBorderDetected) {
-                    recoverySpinLeft = false;
-                } else {
-                    recoverySpinLeft = true;
-                }
-                transitionTo(State::RECOVERY, inputs.currentTimeMs);
+            if (checkBorderTransition(inputs)) {
+                break;
             }
             // Priority 2: Opponent detection
-            else if (inputs.opponentDetected) {
+            if (inputs.opponentDetected) {
                 transitionTo(State::CHARGE, inputs.currentTimeMs);
             }
             break;
         }
         case State::CHARGE: {
             // Priority 1: Border detection
-            if (inputs.leftBorderDetected || inputs.rightBorderDetected) {
-                if (inputs.leftBorderDetected) {
-                    recoverySpinLeft = false;
-                } else {
-                    recoverySpinLeft = true;
-                }
-                transitionTo(State::RECOVERY, inputs.currentTimeMs);
+            if (checkBorderTransition(inputs)) {
+                break;
             }
             // Priority 2: Charge behavior and persistence grace time
-            else {
-                if (inputs.opponentDetected) {
-                    // The opponent is still in sight, reset the lost timer
+            if (inputs.opponentDetected) {
+                // The opponent is still in sight, reset the lost timer
+                lossDetectedAtMs = 0;
+            } else {
+                // Opponent lost from sight, start or verify timer
+                if (lossDetectedAtMs == 0) {
+                    lossDetectedAtMs = inputs.currentTimeMs;
+                } else if (inputs.currentTimeMs - lossDetectedAtMs >= config.persistMs) {
+                    transitionTo(State::SEARCH, inputs.currentTimeMs);
                     lossDetectedAtMs = 0;
-                } else {
-                    // Opponent lost from sight, start or verify timer
-                    if (lossDetectedAtMs == 0) {
-                        lossDetectedAtMs = inputs.currentTimeMs;
-                    } else if (inputs.currentTimeMs - lossDetectedAtMs >= config.persistMs) {
-                        transitionTo(State::SEARCH, inputs.currentTimeMs);
-                        lossDetectedAtMs = 0;
-                    }
                 }
             }
             break;
