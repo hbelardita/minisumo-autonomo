@@ -16,7 +16,7 @@ Refactor the firmware's architecture to align with the project's ubiquitous lang
 4. As a minisumo competitor, I want the robot to enter `Search` after `Opening Move` completes without `Detection`, so that it scans the `Dohyō` for the `Opponent`.
 5. As a minisumo competitor, I want the robot to transition from `Search` to `Charge` upon `Detection`, so that it drives toward the `Opponent` at maximum speed to attempt a `Push Out`.
 6. As a minisumo competitor, I want the robot to persist `Charge` for a brief grace period upon temporary `Loss` before reverting to `Search`, so that minor sensor noise does not disengage an active attack.
-7. As a minisumo competitor, I want the robot to immediately enter `Recovery` whenever a `Border` is detected, regardless of whether it is currently in `Countdown`, `Opening Move`, `Search`, or `Charge`.
+7. As a minisumo competitor, I want the robot to immediately enter `Recovery` whenever a `Border` is detected, regardless of whether it is currently in `Opening Move`, `Search`, or `Charge` (but NOT during `Countdown`, as homologation rules mandate zero movement).
 8. As a minisumo competitor, I want `Recovery` to execute atomically without interruption from new `Detection` events, so that the robot safely moves away from the `Border` before making strategic decisions.
 9. As a minisumo competitor, I want the robot to resume `Search` after `Recovery` completes, so that it regains orientation and locates the `Opponent` from a safe position on the `Dohyō`.
 10. As a software maintainer, I want all state machine state names and function signatures in the codebase to mirror `CONTEXT.md` vocabulary, so that domain rules are clear and explicit in the code.
@@ -32,7 +32,7 @@ Refactor the firmware's architecture to align with the project's ubiquitous lang
   - Domain Engine interface consumes abstract input snapshots (sensor triggers, elapsed time ticks) and produces target behavior/motor drive intentions.
   - Hardware Driver maps physical inputs (TCRT5000 pins, HC-SR04 `pulseIn`, button) into abstract domain events, and maps motor drive intentions to TB6612FNG control pins.
 - **Domain Behavior Rules**:
-  - `Recovery` priority rule: `Border` detection overrides all other states.
+  - `Recovery` priority rule: `Border` detection overrides all active motion states (`Opening Move`, `Search`, `Charge`). It is explicitly ignored during `Countdown` to guarantee the 5-second mandatory stillness.
   - `Recovery` atomicity rule: `Recovery` sequence runs to completion (backup duration + spin duration) regardless of distance sensor inputs.
   - `Opening Move` rule: Fast rotation for fixed maximum duration, aborted immediately on `Detection`.
   - `Charge` persistence rule: Distance sensor loss triggers internal persistence timer before emitting `Loss` event.
@@ -41,6 +41,7 @@ Refactor the firmware's architecture to align with the project's ubiquitous lang
   - Replace `STATE_ATTACK` with `CHARGE`
   - Replace `STATE_INITIAL_TACTIC` with `OPENING_MOVE`
   - Replace `STATE_SAFETY_DELAY` with `COUNTDOWN`
+  - All debug/serial outputs and internal logs must be standardized to English to match the ubiquitous language, while maintaining code comments in Spanish (per user preference).
 
 ## Testing Decisions
 
