@@ -4,8 +4,8 @@
 // Quick configuration for instant unit tests without real-time delays
 DomainConfig createTestConfig() {
     DomainConfig cfg;
-    cfg.safetyMs = 1000;
-    cfg.tacticMs = 100;
+    cfg.countdownMs = 1000;
+    cfg.openingMoveMs = 100;
     cfg.backupMs = 50;
     cfg.recoveryMs = 150;
     cfg.persistMs = 60;
@@ -13,7 +13,7 @@ DomainConfig createTestConfig() {
 
     cfg.backupSpeed = -180;
     cfg.spinSpeed = 180;
-    cfg.tacticSpeed = 160;
+    cfg.openingMoveSpeed = 160;
     cfg.searchSpeed = 120;
     cfg.chargeSpeed = 255;
     return cfg;
@@ -46,7 +46,7 @@ void test_countdown_duration() {
     TEST_ASSERT_EQUAL(0, outputs.leftMotorSpeed);
     TEST_ASSERT_EQUAL(0, outputs.rightMotorSpeed);
 
-    // With elapsed time less than safetyMs, it remains in COUNTDOWN
+    // With elapsed time less than countdownMs, it remains in COUNTDOWN
     inputs.buttonPressed = false;
     inputs.currentTimeMs = 500; // 490ms elapsed
     outputs = engine.update(inputs);
@@ -65,7 +65,7 @@ void test_countdown_duration() {
     TEST_ASSERT_FALSE(outputs.ledOn);
 }
 
-// 2. Opening move starts after countdown: Verifies transition to tactical move when the countdown expires
+// 2. Opening move starts after countdown: Verifies transition to opening move when the countdown expires
 void test_opening_move_starts_after_countdown() {
     DomainConfig cfg = createTestConfig();
     DomainEngine engine(cfg);
@@ -75,7 +75,7 @@ void test_opening_move_starts_after_countdown() {
     engine.update(inputs);
     TEST_ASSERT_EQUAL(State::COUNTDOWN, engine.getState());
 
-    // Expire countdown (safetyMs = 1000)
+    // Expire countdown (countdownMs = 1000)
     inputs.buttonPressed = false;
     inputs.currentTimeMs = 1000;
     DomainOutputs outputs = engine.update(inputs);
@@ -83,12 +83,12 @@ void test_opening_move_starts_after_countdown() {
     // Must transition to OPENING_MOVE spinning right
     TEST_ASSERT_EQUAL(State::OPENING_MOVE, engine.getState());
     TEST_ASSERT_EQUAL(MotorMode::DRIVE, outputs.motorMode);
-    TEST_ASSERT_EQUAL(cfg.tacticSpeed, outputs.leftMotorSpeed);
-    TEST_ASSERT_EQUAL(-cfg.tacticSpeed, outputs.rightMotorSpeed);
+    TEST_ASSERT_EQUAL(cfg.openingMoveSpeed, outputs.leftMotorSpeed);
+    TEST_ASSERT_EQUAL(-cfg.openingMoveSpeed, outputs.rightMotorSpeed);
     TEST_ASSERT_TRUE(outputs.ledOn);
 }
 
-// 3. Opening move interruptible by detection: Verifies that detecting an opponent interrupts the tactical move
+// 3. Opening move interruptible by detection: Verifies that detecting an opponent interrupts the opening move
 void test_opening_move_interruptible_by_detection() {
     DomainConfig cfg = createTestConfig();
     DomainEngine engine(cfg);
@@ -113,7 +113,7 @@ void test_opening_move_interruptible_by_detection() {
     TEST_ASSERT_EQUAL(cfg.chargeSpeed, outputs.rightMotorSpeed);
 }
 
-// 4. Opening move transitions to Search: Transitions to SEARCH if tacticMs expires
+// 4. Opening move transitions to Search: Transitions to SEARCH if openingMoveMs expires
 void test_opening_move_transitions_to_search() {
     DomainConfig cfg = createTestConfig();
     DomainEngine engine(cfg);
@@ -126,7 +126,7 @@ void test_opening_move_transitions_to_search() {
     engine.update(inputs);
     TEST_ASSERT_EQUAL(State::OPENING_MOVE, engine.getState());
 
-    // Expire tactical time (tacticMs = 100ms, from t=1000ms to t=1100ms) without detections
+    // Expire opening move time (openingMoveMs = 100ms, from t=1000ms to t=1100ms) without detections
     inputs.currentTimeMs = 1100;
     DomainOutputs outputs = engine.update(inputs);
 
@@ -219,7 +219,7 @@ void test_charge_persistence() {
 void test_recovery_priority() {
     DomainConfig cfg = createTestConfig();
     
-    // Interruption from Countdown
+    // Interruption from Countdown (should stay in COUNTDOWN, ignoring border detection)
     {
         DomainEngine engine(cfg);
         DomainInputs inputs = {0, true, false, false, false};
@@ -229,7 +229,7 @@ void test_recovery_priority() {
         inputs.currentTimeMs = 100;
         inputs.leftBorderDetected = true;
         engine.update(inputs);
-        TEST_ASSERT_EQUAL(State::RECOVERY, engine.getState());
+        TEST_ASSERT_EQUAL(State::COUNTDOWN, engine.getState());
     }
 
     // Interruption from Opening Move
@@ -286,7 +286,7 @@ void test_recovery_priority() {
     }
 }
 
-// 8. Recovery atomicity: Evasion ignores other border or opponent signals until completed
+// 8. Recovery atomicity: Recovery ignores other border or opponent signals until completed
 void test_recovery_atomicity() {
     DomainConfig cfg = createTestConfig();
     DomainEngine engine(cfg);
@@ -318,7 +318,7 @@ void test_recovery_atomicity() {
     TEST_ASSERT_EQUAL(cfg.backupSpeed, outputs.rightMotorSpeed);
 }
 
-// 9. Recovery transitions to Search after completion: Evasion divided into phases and return to search
+// 9. Recovery transitions to Search after completion: Recovery divided into phases and return to search
 void test_recovery_transitions_to_search_after_completion() {
     DomainConfig cfg = createTestConfig();
     
@@ -354,7 +354,7 @@ void test_recovery_transitions_to_search_after_completion() {
         TEST_ASSERT_EQUAL(cfg.spinSpeed, outputs.leftMotorSpeed);
         TEST_ASSERT_EQUAL(-cfg.spinSpeed, outputs.rightMotorSpeed);
 
-        // End of evasion: t=1350 (elapsed >= 150ms) -> transitions to SEARCH
+        // End of recovery: t=1350 (elapsed >= 150ms) -> transitions to SEARCH
         inputs.currentTimeMs = 1350;
         outputs = engine.update(inputs);
         TEST_ASSERT_EQUAL(State::SEARCH, engine.getState());

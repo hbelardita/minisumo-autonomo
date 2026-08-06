@@ -24,16 +24,16 @@ const uint8_t PIN_LED = 13;
 
 DomainConfig buildDomainConfig() {
     DomainConfig cfg;
-    cfg.safetyMs = SAFETY_MS;
-    cfg.tacticMs = TACTIC_MS;
+    cfg.countdownMs = SAFETY_MS;
+    cfg.openingMoveMs = TACTIC_MS;
     cfg.backupMs = BACKUP_MS;
-    cfg.recoveryMs = EVADE_MS; // total evade time
+    cfg.recoveryMs = EVADE_MS; // Total recovery time
     cfg.persistMs = PERSIST_MS;
     cfg.blinkMs = BLINK_MS;
     
     cfg.backupSpeed = EVADE_BACKUP_SPEED;
     cfg.spinSpeed = EVADE_SPIN_SPEED;
-    cfg.tacticSpeed = INITIAL_TACTIC_SPEED;
+    cfg.openingMoveSpeed = INITIAL_TACTIC_SPEED;
     cfg.searchSpeed = SEARCH_SPEED;
     cfg.chargeSpeed = ATTACK_SPEED;
     return cfg;

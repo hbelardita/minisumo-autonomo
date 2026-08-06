@@ -4,14 +4,14 @@ DomainEngine::DomainEngine(const DomainConfig& config)
     : config(config),
       currentState(State::STANDBY),
       stateStartTimeMs(0),
-      timeLostMs(0),
+      lossDetectedAtMs(0),
       recoverySpinLeft(false) {}
 
 void DomainEngine::transitionTo(State newState, unsigned long currentTimeMs) {
     currentState = newState;
     stateStartTimeMs = currentTimeMs;
     if (newState == State::CHARGE) {
-        timeLostMs = 0;
+        lossDetectedAtMs = 0;
     }
 }
 
@@ -25,17 +25,8 @@ DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
             break;
         }
         case State::COUNTDOWN: {
-            // Priority 1: Border detection during countdown
-            if (inputs.leftBorderDetected || inputs.rightBorderDetected) {
-                if (inputs.leftBorderDetected) {
-                    recoverySpinLeft = false; // Clockwise spin (spin right) by default if both are detected
-                } else {
-                    recoverySpinLeft = true;  // Counter-clockwise spin (spin left)
-                }
-                transitionTo(State::RECOVERY, inputs.currentTimeMs);
-            }
-            // Priority 2: Safety time expiration
-            else if (inputs.currentTimeMs - stateStartTimeMs >= config.safetyMs) {
+            // Countdown duration (COUNTDOWN_MS) expiration
+            if (inputs.currentTimeMs - stateStartTimeMs >= config.countdownMs) {
                 transitionTo(State::OPENING_MOVE, inputs.currentTimeMs);
             }
             break;
@@ -54,8 +45,8 @@ DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
             else if (inputs.opponentDetected) {
                 transitionTo(State::CHARGE, inputs.currentTimeMs);
             }
-            // Priority 3: Initial tactical time expiration
-            else if (inputs.currentTimeMs - stateStartTimeMs >= config.tacticMs) {
+            // Priority 3: Initial opening move time expiration
+            else if (inputs.currentTimeMs - stateStartTimeMs >= config.openingMoveMs) {
                 transitionTo(State::SEARCH, inputs.currentTimeMs);
             }
             break;
@@ -86,18 +77,18 @@ DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
                 }
                 transitionTo(State::RECOVERY, inputs.currentTimeMs);
             }
-            // Priority 2: Attack behavior and persistence grace time
+            // Priority 2: Charge behavior and persistence grace time
             else {
                 if (inputs.opponentDetected) {
                     // The opponent is still in sight, reset the lost timer
-                    timeLostMs = 0;
+                    lossDetectedAtMs = 0;
                 } else {
                     // Opponent lost from sight, start or verify timer
-                    if (timeLostMs == 0) {
-                        timeLostMs = inputs.currentTimeMs;
-                    } else if (inputs.currentTimeMs - timeLostMs >= config.persistMs) {
+                    if (lossDetectedAtMs == 0) {
+                        lossDetectedAtMs = inputs.currentTimeMs;
+                    } else if (inputs.currentTimeMs - lossDetectedAtMs >= config.persistMs) {
                         transitionTo(State::SEARCH, inputs.currentTimeMs);
-                        timeLostMs = 0;
+                        lossDetectedAtMs = 0;
                     }
                 }
             }
@@ -135,8 +126,8 @@ DomainOutputs DomainEngine::update(const DomainInputs& inputs) {
         }
         case State::OPENING_MOVE: {
             outputs.motorMode = MotorMode::DRIVE;
-            outputs.leftMotorSpeed = config.tacticSpeed;
-            outputs.rightMotorSpeed = -config.tacticSpeed;
+            outputs.leftMotorSpeed = config.openingMoveSpeed;
+            outputs.rightMotorSpeed = -config.openingMoveSpeed;
             outputs.ledOn = true;
             break;
         }

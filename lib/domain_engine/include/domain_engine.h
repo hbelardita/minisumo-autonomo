@@ -6,11 +6,11 @@
  */
 enum class State {
     STANDBY,       // Initial standby state, motors off
-    COUNTDOWN,     // Safety countdown with LED blinking
+    COUNTDOWN,     // Countdown with LED blinking
     OPENING_MOVE,  // Initial tactical move when combat starts
     SEARCH,        // Search for the opponent by spinning on its axis
-    CHARGE,        // Direct attack/charge towards the detected opponent
-    RECOVERY       // Evasion of the white line (backup and spin)
+    CHARGE,        // Charge towards the detected opponent
+    RECOVERY       // Recovery from border detection (backup and spin)
 };
 
 /**
@@ -26,16 +26,16 @@ enum class MotorMode {
  * @brief Adjustable configuration parameters of the FSM.
  */
 struct DomainConfig {
-    unsigned long safetyMs = 5000;      // Safety countdown duration (SAFETY_MS)
-    unsigned long tacticMs = 400;       // Duration of the initial tactical spin (TACTIC_MS)
-    unsigned long backupMs = 250;       // Backup time during evasion (BACKUP_MS)
-    unsigned long recoveryMs = 450;     // Total evasion/recovery time (EVADE_MS)
-    unsigned long persistMs = 200;      // Attack persistence time without seeing the opponent (PERSIST_MS)
+    unsigned long countdownMs = 5000;   // Countdown duration (COUNTDOWN_MS)
+    unsigned long openingMoveMs = 400;  // Opening move duration (OPENING_MOVE_MS)
+    unsigned long backupMs = 250;       // Backup time during recovery (BACKUP_MS)
+    unsigned long recoveryMs = 450;     // Total recovery time
+    unsigned long persistMs = 200;      // Charge persistence time without seeing the opponent (PERSIST_MS)
     unsigned long blinkMs = 100;        // LED blinking semiperiod at 5Hz (BLINK_MS)
 
-    int backupSpeed = -180;             // Backup speed in evasion (EVADE_BACKUP_SPEED)
-    int spinSpeed = 180;                // Spin speed in evasion (EVADE_SPIN_SPEED)
-    int tacticSpeed = 160;              // Initial tactical spin speed (INITIAL_TACTIC_SPEED)
+    int backupSpeed = -180;             // Backup speed in recovery (EVADE_BACKUP_SPEED)
+    int spinSpeed = 180;                // Spin speed in recovery (EVADE_SPIN_SPEED)
+    int openingMoveSpeed = 160;         // Initial opening move spin speed (INITIAL_OPENING_MOVE_SPEED)
     int searchSpeed = 120;              // Search speed (SEARCH_SPEED)
     int chargeSpeed = 255;              // Attack/charge speed (ATTACK_SPEED)
 };
@@ -92,7 +92,7 @@ private:
     unsigned long stateStartTimeMs;     // Timestamp of the last state transition
     
     // Control variables for charge persistence
-    unsigned long timeLostMs;
+    unsigned long lossDetectedAtMs;
 
     // Spin direction in the recovery state
     bool recoverySpinLeft;              // true = spin left (counter-clockwise), false = spin right (clockwise)
