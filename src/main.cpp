@@ -58,6 +58,20 @@ void transitionTo(State newState) {
     }
 }
 
+// Chequeo de emergencia de línea post-distanceRead
+// Devuelve true si detectó borde y ya transicionó a evasión
+static bool checkLineEmergency() {
+    if (lineReadLeftRaw()) {
+        transitionTo(STATE_EVADE_LEFT);
+        return true;
+    }
+    if (lineReadRightRaw()) {
+        transitionTo(STATE_EVADE_RIGHT);
+        return true;
+    }
+    return false;
+}
+
 void setup() {
     pinMode(PIN_LED, OUTPUT);
     digitalWrite(PIN_LED, LOW);
@@ -169,6 +183,7 @@ void loop() {
             // Transiciona si detecta oponente en frente
             {
                 unsigned int dist = distanceRead();
+                if (checkLineEmergency()) break;
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     transitionTo(STATE_ATTACK);
                     break;
@@ -195,6 +210,7 @@ void loop() {
             // Transiciona si detecta oponente
             {
                 unsigned int dist = distanceRead();
+                if (checkLineEmergency()) break;
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     transitionTo(STATE_ATTACK);
                 } else if (dist > 0 && dist < APPROACH_DISTANCE) {
@@ -210,6 +226,7 @@ void loop() {
             // Comprobación de distancia con el oponente
             {
                 unsigned int dist = distanceRead();
+                if (checkLineEmergency()) break;
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     transitionTo(STATE_ATTACK);
                 } else if (dist > 0 && dist < APPROACH_DISTANCE) {
@@ -233,6 +250,7 @@ void loop() {
             // Comprobación de escape del oponente
             {
                 unsigned int dist = distanceRead();
+                if (checkLineEmergency()) break;
 
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     timeLost = 0; // Vemos al rival claro, reseteamos contador de pérdida

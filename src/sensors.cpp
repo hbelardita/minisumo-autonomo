@@ -32,8 +32,8 @@ unsigned int distanceRead() {
 // Función auxiliar interna para aplicar filtro antirrebote (debounce) a los TCRT5000
 static bool readLineSensor(uint8_t pin, int &count) {
     count = (digitalRead(pin) == LOW) ? count + 1 : 0;
-    if (count > 4) count = 4;
-    return count >= 4;
+    if (count > 2) count = 2;
+    return count >= 2;
 }
 
 // Lectura con debounce del sensor izquierdo
@@ -46,6 +46,15 @@ bool lineReadLeft() {
 bool lineReadRight() {
     static int count = 0;
     return readLineSensor(PIN_TCRT_RIGHT, count);
+}
+
+// Lecturas directas sin debounce para chequeos inmediatos
+bool lineReadLeftRaw() {
+    return digitalRead(PIN_TCRT_LEFT) == LOW;
+}
+
+bool lineReadRightRaw() {
+    return digitalRead(PIN_TCRT_RIGHT) == LOW;
 }
 
 // Comprueba estado del botón (activo-bajo)

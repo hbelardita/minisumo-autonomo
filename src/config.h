@@ -34,7 +34,7 @@ const unsigned long EVADE_MS = 700;        // Tiempo total de evasión (retroces
 const unsigned long PERSIST_MS = 200;      // Tiempo de persistencia de ataque sin ver al rival
 const unsigned long SAFETY_MS = 5000;      // Tiempo de espera de seguridad inicial (5 segundos)
 const unsigned long BLINK_MS = 100;        // Frecuencia de parpadeo del LED (5Hz)
-const unsigned long ULTRASONIC_TIMEOUT = 3500; // Timeout de pulseIn (microsegundos) para ~60cm
+const unsigned long ULTRASONIC_TIMEOUT = 2100; // Timeout de pulseIn (microsegundos) para ~36cm
 
 // Velocidades de Motores
 const int EVADE_BACKUP_SPEED = -180;

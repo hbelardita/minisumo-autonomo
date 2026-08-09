@@ -15,6 +15,10 @@ bool lineReadLeft();
 // Verifica el estado del sensor de línea derecho con filtro antirrebote
 bool lineReadRight();
 
+// Lectura directa sin debounce (para chequeos de emergencia)
+bool lineReadLeftRaw();
+bool lineReadRightRaw();
+
 // Devuelve verdadero si el botón físico está presionado (filtro activo-bajo)
 bool buttonPressed();
 
