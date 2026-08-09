@@ -26,10 +26,11 @@ extern const uint8_t PIN_BUTTON;
 extern const uint8_t PIN_LED;
 
 // Umbrales y Tiempos de Calibración
-const unsigned int ATTACK_DISTANCE = 50;   // Distancia en cm para atacar
+const unsigned int ATTACK_DISTANCE = 15;   // Distancia en cm para atacar (cuerpo a cuerpo)
+const unsigned int APPROACH_DISTANCE = 35; // Distancia en cm para aproximación (media)
 const unsigned long TACTIC_MS = 400;       // Tiempo de giro inicial de la táctica
-const unsigned long BACKUP_MS = 250;       // Tiempo de retroceso en evasión
-const unsigned long EVADE_MS = 450;        // Tiempo total de evasión (retroceso + giro)
+const unsigned long BACKUP_MS = 450;       // Tiempo de retroceso en evasión
+const unsigned long EVADE_MS = 700;        // Tiempo total de evasión (retroceso + giro)
 const unsigned long PERSIST_MS = 200;      // Tiempo de persistencia de ataque sin ver al rival
 const unsigned long SAFETY_MS = 5000;      // Tiempo de espera de seguridad inicial (5 segundos)
 const unsigned long BLINK_MS = 100;        // Frecuencia de parpadeo del LED (5Hz)
@@ -40,6 +41,7 @@ const int EVADE_BACKUP_SPEED = -180;
 const int EVADE_SPIN_SPEED = 180;
 const int INITIAL_TACTIC_SPEED = 160;
 const int SEARCH_SPEED = 120;
+const int APPROACH_SPEED = 160;
 const int ATTACK_SPEED = 255;
 
 #endif

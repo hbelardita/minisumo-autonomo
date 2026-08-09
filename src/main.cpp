@@ -27,6 +27,7 @@ enum State {
     STATE_SAFETY_DELAY,
     STATE_INITIAL_TACTIC,
     STATE_SEARCH,
+    STATE_APPROACH,
     STATE_ATTACK,
     STATE_EVADE_LEFT,
     STATE_EVADE_RIGHT
@@ -35,16 +36,24 @@ enum State {
 State currentState = STATE_STANDBY;
 unsigned long stateStartTime = 0;
 
+// Sentido de búsqueda (girar a la derecha o a la izquierda)
+bool searchClockwise = true;
+
 // Temporizador para persistencia de ataque (corregido de static local a global de archivo)
 static unsigned long timeLost = 0;
 
 // Realiza la transición de estado y registra el tiempo de inicio
 void transitionTo(State newState) {
+    // Si entramos a buscar, alternamos el sentido del giro respecto a la última vez
+    if (newState == STATE_SEARCH) {
+        searchClockwise = !searchClockwise;
+    }
+
     currentState = newState;
     stateStartTime = millis();
 
-    // CORRECCIÓN: Se limpia el temporizador de pérdida al entrar en estado de ataque
-    if (newState == STATE_ATTACK) {
+    // CORRECCIÓN: Se limpia el temporizador de pérdida al entrar en estado de ataque o aproximación
+    if (newState == STATE_ATTACK || newState == STATE_APPROACH) {
         timeLost = 0;
     }
 }
@@ -163,6 +172,9 @@ void loop() {
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     transitionTo(STATE_ATTACK);
                     break;
+                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
+                    transitionTo(STATE_APPROACH);
+                    break;
                 }
             }
 
@@ -173,14 +185,43 @@ void loop() {
             break;
 
         case STATE_SEARCH:
-            // Giro de búsqueda constante sobre el eje
-            motorsSetSpeed(SEARCH_SPEED, -SEARCH_SPEED);
+            // Giro de búsqueda constante sobre el eje en la dirección alternada
+            if (searchClockwise) {
+                motorsSetSpeed(SEARCH_SPEED, -SEARCH_SPEED);
+            } else {
+                motorsSetSpeed(-SEARCH_SPEED, SEARCH_SPEED);
+            }
 
             // Transiciona si detecta oponente
             {
                 unsigned int dist = distanceRead();
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     transitionTo(STATE_ATTACK);
+                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
+                    transitionTo(STATE_APPROACH);
+                }
+            }
+            break;
+
+        case STATE_APPROACH:
+            // Avance recto a velocidad media
+            motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
+
+            // Comprobación de distancia con el oponente
+            {
+                unsigned int dist = distanceRead();
+                if (dist > 0 && dist < ATTACK_DISTANCE) {
+                    transitionTo(STATE_ATTACK);
+                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
+                    timeLost = 0; // Seguimos viéndolo a distancia de approach
+                } else {
+                    // Si perdemos contacto
+                    if (timeLost == 0) {
+                        timeLost = millis();
+                    } else if (millis() - timeLost > PERSIST_MS) {
+                        transitionTo(STATE_SEARCH);
+                        timeLost = 0;
+                    }
                 }
             }
             break;
@@ -195,6 +236,9 @@ void loop() {
 
                 if (dist > 0 && dist < ATTACK_DISTANCE) {
                     timeLost = 0; // Vemos al rival claro, reseteamos contador de pérdida
+                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
+                    // El oponente se alejó un poco, pasamos a aproximación
+                    transitionTo(STATE_APPROACH);
                 } else {
                     // Si perdemos contacto visual
                     if (timeLost == 0) {
