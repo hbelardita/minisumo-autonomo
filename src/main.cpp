@@ -200,11 +200,13 @@ void loop() {
             break;
 
         case STATE_SEARCH:
-            // Giro de búsqueda constante sobre el eje en la dirección alternada
+            // Búsqueda en arco continuo alternando la dirección
             if (searchClockwise) {
-                motorsSetSpeed(SEARCH_SPEED, -SEARCH_SPEED);
+                // Arco hacia la derecha: rueda izquierda a máxima velocidad de búsqueda, derecha a la mitad
+                motorsSetSpeed(SEARCH_SPEED, SEARCH_SPEED / 2);
             } else {
-                motorsSetSpeed(-SEARCH_SPEED, SEARCH_SPEED);
+                // Arco hacia la izquierda: rueda izquierda a la mitad, derecha a máxima velocidad de búsqueda
+                motorsSetSpeed(SEARCH_SPEED / 2, SEARCH_SPEED);
             }
 
             // Transiciona si detecta oponente
@@ -252,13 +254,16 @@ void loop() {
                 unsigned int dist = distanceRead();
                 if (checkLineEmergency()) break;
 
-                if (dist > 0 && dist < ATTACK_DISTANCE) {
-                    timeLost = 0; // Vemos al rival claro, reseteamos contador de pérdida
-                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
-                    // El oponente se alejó un poco, pasamos a aproximación
+                // Si dist == 0, el HC-SR04 está en su zona ciega (< 2 cm) porque estamos
+                // empujando al rival cuerpo a cuerpo. Se mantiene el ataque a fondo;
+                // la línea blanca detendrá el empuje al llegar al borde del dohyo.
+                if (dist == 0 || (dist > 0 && dist < ATTACK_RELEASE_DISTANCE)) {
+                    timeLost = 0; // Contacto cuerpo a cuerpo o en rango de ataque
+                } else if (dist >= ATTACK_RELEASE_DISTANCE && dist < APPROACH_DISTANCE) {
+                    // El oponente logró separarse: pasamos a aproximación con histéresis
                     transitionTo(STATE_APPROACH);
                 } else {
-                    // Si perdemos contacto visual
+                    // dist >= APPROACH_DISTANCE: rival fuera de alcance frontal
                     if (timeLost == 0) {
                         timeLost = millis(); // Inicia cuenta de persistencia
                     } else if (millis() - timeLost > PERSIST_MS) {
@@ -271,22 +276,10 @@ void loop() {
             break;
 
         case STATE_EVADE_LEFT:
-            // Línea blanca detectada en la izquierda: retrocede y gira a la derecha
-            if (millis() - stateStartTime < BACKUP_MS) {
-                motorsSetSpeed(EVADE_BACKUP_SPEED, EVADE_BACKUP_SPEED);
-            } else if (millis() - stateStartTime < EVADE_MS) {
-                motorsSetSpeed(EVADE_SPIN_SPEED, -EVADE_SPIN_SPEED);
-            } else {
-                transitionTo(STATE_SEARCH);
-            }
-            break;
-
         case STATE_EVADE_RIGHT:
-            // Línea blanca detectada en la derecha: retrocede y gira a la izquierda
+            // Línea blanca detectada: solo retrocede en línea recta
             if (millis() - stateStartTime < BACKUP_MS) {
-                motorsSetSpeed(EVADE_BACKUP_SPEED, EVADE_BACKUP_SPEED);
-            } else if (millis() - stateStartTime < EVADE_MS) {
-                motorsSetSpeed(-EVADE_SPIN_SPEED, EVADE_SPIN_SPEED);
+                motorsSetSpeed(EVADE_BACKUP_SPEED_L, EVADE_BACKUP_SPEED_R);
             } else {
                 transitionTo(STATE_SEARCH);
             }

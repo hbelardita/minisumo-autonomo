@@ -14,6 +14,15 @@ void sensorsInit() {
 
 // Envía un pulso ultrasónico y mide el tiempo de respuesta
 unsigned int distanceRead() {
+    static unsigned long lastReadTime = 0;
+    static unsigned int lastDistance = 0;
+
+    // Respetar un intervalo mínimo (40ms) para evitar solapamiento de ecos
+    if (millis() - lastReadTime < 40) {
+        return lastDistance;
+    }
+    lastReadTime = millis();
+
     // Genera pulso de disparo de 10us
     digitalWrite(PIN_TRIG, LOW);
     delayMicroseconds(2);
@@ -24,9 +33,12 @@ unsigned int distanceRead() {
     // Lee la duración del pulso en Echo
     unsigned long duration = pulseIn(PIN_ECHO, HIGH, ULTRASONIC_TIMEOUT);
     if (duration == 0) {
-        return 0; // Sin obstáculo detectado en el rango configurado
+        lastDistance = 0; // Sin obstáculo detectado en el rango configurado
+    } else {
+        lastDistance = duration / 58;
     }
-    return duration / 58;
+    
+    return lastDistance;
 }
 
 // Función auxiliar interna para aplicar filtro antirrebote (debounce) a los TCRT5000
