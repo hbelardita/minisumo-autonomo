@@ -29,8 +29,8 @@ enum State {
     STATE_SEARCH,
     STATE_APPROACH,
     STATE_ATTACK,
-    STATE_EVADE_LEFT,
-    STATE_EVADE_RIGHT
+    STATE_EVADE_BACKUP,
+    STATE_EVADE_TURN
 };
 
 State currentState = STATE_STANDBY;
@@ -39,13 +39,16 @@ unsigned long stateStartTime = 0;
 // Sentido de búsqueda (girar a la derecha o a la izquierda)
 bool searchClockwise = true;
 
+// Dirección del giro de evasión (horario si tocó sensor izquierdo o ambos, antihorario si tocó derecho)
+bool evadeTurnClockwise = true;
+
 // Temporizador para persistencia de ataque (corregido de static local a global de archivo)
 static unsigned long timeLost = 0;
 
 // Realiza la transición de estado y registra el tiempo de inicio
 void transitionTo(State newState) {
-    // Si entramos a buscar, alternamos el sentido del giro respecto a la última vez
-    if (newState == STATE_SEARCH) {
+    // Si entramos a buscar desde un estado que no sea evasión, alternamos el sentido del giro respecto a la última vez
+    if (newState == STATE_SEARCH && currentState != STATE_EVADE_TURN) {
         searchClockwise = !searchClockwise;
     }
 
@@ -61,12 +64,18 @@ void transitionTo(State newState) {
 // Chequeo de emergencia de línea post-distanceRead
 // Devuelve true si detectó borde y ya transicionó a evasión
 static bool checkLineEmergency() {
-    if (lineReadLeftRaw()) {
-        transitionTo(STATE_EVADE_LEFT);
-        return true;
-    }
-    if (lineReadRightRaw()) {
-        transitionTo(STATE_EVADE_RIGHT);
+    bool leftRaw = lineReadLeftRaw();
+    bool rightRaw = lineReadRightRaw();
+
+    if (leftRaw || rightRaw) {
+        if (leftRaw && rightRaw) {
+            evadeTurnClockwise = true;  // Ambos sensores: horario por defecto
+        } else if (leftRaw) {
+            evadeTurnClockwise = true;  // Sensor izquierdo: giro horario
+        } else {
+            evadeTurnClockwise = false; // Sensor derecho: giro antihorario
+        }
+        transitionTo(STATE_EVADE_BACKUP);
         return true;
     }
     return false;
@@ -137,16 +146,22 @@ void loop() {
     return; // Evita el bucle de la máquina de estados si estamos en debug
 #endif
 
-    // Prioridad 1: Detección de sensores de línea blanca (solo activos en combate)
-    if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY) {
+    // Prioridad 1: Detección de sensores de línea blanca (solo activos en combate y fuera de evasión)
+    if (currentState != STATE_STANDBY && currentState != STATE_SAFETY_DELAY &&
+        currentState != STATE_EVADE_BACKUP && currentState != STATE_EVADE_TURN) {
         // Leemos siempre ambos para no romper el debounce estático
         bool leftLine = lineReadLeft();
         bool rightLine = lineReadRight();
 
-        if (leftLine && currentState != STATE_EVADE_LEFT && currentState != STATE_EVADE_RIGHT) {
-            transitionTo(STATE_EVADE_LEFT);
-        } else if (rightLine && currentState != STATE_EVADE_RIGHT && currentState != STATE_EVADE_LEFT) {
-            transitionTo(STATE_EVADE_RIGHT);
+        if (leftLine || rightLine) {
+            if (leftLine && rightLine) {
+                evadeTurnClockwise = true;  // Ambos sensores: horario por defecto
+            } else if (leftLine) {
+                evadeTurnClockwise = true;  // Sensor izquierdo: giro horario
+            } else {
+                evadeTurnClockwise = false; // Sensor derecho: giro antihorario
+            }
+            transitionTo(STATE_EVADE_BACKUP);
         }
     }
 
@@ -275,12 +290,28 @@ void loop() {
             }
             break;
 
-        case STATE_EVADE_LEFT:
-        case STATE_EVADE_RIGHT:
-            // Línea blanca detectada: solo retrocede en línea recta
-            if (millis() - stateStartTime < BACKUP_MS) {
+        case STATE_EVADE_BACKUP:
+            // Fase 1: micro-retroceso en línea recta para despejar la pala
+            if (millis() - stateStartTime < EVADE_BACKUP_MS) {
                 motorsSetSpeed(EVADE_BACKUP_SPEED_L, EVADE_BACKUP_SPEED_R);
             } else {
+                transitionTo(STATE_EVADE_TURN);
+            }
+            break;
+
+        case STATE_EVADE_TURN:
+            // Fase 2: giro puro sobre su eje calibrado a 90°-100°
+            if (millis() - stateStartTime < EVADE_TURN_MS) {
+                if (evadeTurnClockwise) {
+                    // Giro horario: rueda izquierda adelante, derecha atrás
+                    motorsSetSpeed(EVADE_SPIN_SPEED, -EVADE_SPIN_SPEED);
+                } else {
+                    // Giro antihorario: rueda izquierda atrás, derecha adelante
+                    motorsSetSpeed(-EVADE_SPIN_SPEED, EVADE_SPIN_SPEED);
+                }
+            } else {
+                // Al completar el giro, sincronizar searchClockwise y transicionar a búsqueda
+                searchClockwise = evadeTurnClockwise;
                 transitionTo(STATE_SEARCH);
             }
             break;
