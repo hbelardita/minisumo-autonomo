@@ -34,17 +34,17 @@ const int EVADE_BACKUP_SPEED_R = -150;     // Velocidad de retroceso rueda derec
 const int EVADE_SPIN_SPEED = 200;          // Velocidad de giro durante evasion
 
 // Parámetros de Sensores de Línea (Analógico)
-const unsigned int LINE_THRESHOLD_ANALOG = 500; // Umbral analogico para linea blanca (0-1023)
+const unsigned int LINE_THRESHOLD_ANALOG = 400; // Umbral analogico para linea blanca (0-1023)
 const bool LINE_IS_WHITE_LOW = true; // Si el sensor devuelve LOW / voltaje bajo sobre blanco
 
 // Umbrales y Tiempos de Calibración
-const unsigned int ATTACK_DISTANCE = 10;           // Distancia en cm para atacar (cuerpo a cuerpo)
-const unsigned int ATTACK_RELEASE_DISTANCE = 15;   // Distancia en cm para salir de ataque hacia aproximación (histéresis)
+const unsigned int ATTACK_DISTANCE = 12;           // Distancia en cm para atacar (cuerpo a cuerpo)
+const unsigned int ATTACK_RELEASE_DISTANCE = 25;   // Distancia en cm para salir de ataque hacia aproximación (histéresis)
 const unsigned int APPROACH_DISTANCE = 60;         // Distancia en cm para aproximación (cubre oponentes en dohyo de 77 cm)
 const unsigned long PERSIST_MS = 1500;      // Tiempo de persistencia de ataque sin ver al rival
 const unsigned long SAFETY_MS = 5000;      // Tiempo de espera de seguridad inicial (5 segundos)
 const unsigned long BLINK_MS = 100;        // Frecuencia de parpadeo del LED (5Hz)
-const unsigned long ULTRASONIC_TIMEOUT = 5000; // Timeout de pulseIn en us (~70cm util + overhead ~450us del HC-SR04)
+const unsigned long ULTRASONIC_TIMEOUT = 18000; // Timeout de pulseIn en us (~77cm util + latencia de inicio HC-SR04)
 
 // Velocidades de Motores
 const int SEARCH_SPEED = 100;

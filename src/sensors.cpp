@@ -16,11 +16,19 @@ unsigned int distanceRead() {
     static unsigned long lastReadTime = 0;
     static unsigned int lastDistance = 0;
 
-    // Respetar un intervalo mínimo (40ms) para evitar solapamiento de ecos
-    if (millis() - lastReadTime < 40) {
+    // Respetar un intervalo mínimo (50ms) para evitar solapamiento de ecos
+    if (millis() - lastReadTime < 50) {
         return lastDistance;
     }
     lastReadTime = millis();
+
+    // Antes de enviar pulso TRIG, destrabar ECHO si quedó en HIGH
+    if (digitalRead(PIN_ECHO) == HIGH) {
+        pinMode(PIN_ECHO, OUTPUT);
+        digitalWrite(PIN_ECHO, LOW);
+        delayMicroseconds(10);
+        pinMode(PIN_ECHO, INPUT);
+    }
 
     // Genera pulso de disparo de 10us
     digitalWrite(PIN_TRIG, LOW);
@@ -31,7 +39,16 @@ unsigned int distanceRead() {
 
     // Lee la duración del pulso en Echo
     unsigned long duration = pulseIn(PIN_ECHO, HIGH, ULTRASONIC_TIMEOUT);
-    lastDistance = (duration == 0) ? 0 : (duration / 58);
+    if (duration == 0) {
+        // Destrabe a PIN_ECHO para evitar colgado de hardware en clones HC-SR04
+        pinMode(PIN_ECHO, OUTPUT);
+        digitalWrite(PIN_ECHO, LOW);
+        delayMicroseconds(10);
+        pinMode(PIN_ECHO, INPUT);
+        lastDistance = 0;
+    } else {
+        lastDistance = duration / 58;
+    }
     return lastDistance;
 }
 

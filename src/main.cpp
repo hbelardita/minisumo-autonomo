@@ -111,7 +111,7 @@ void setup() {
     Serial.begin(9600);
     while (!Serial) { ; }
     Serial.println("--- MODO DEBUG DE SENSORES HABILITADO ---");
-    Serial.println("Lecturas en tiempo real de TCRT5000 cada 200ms:");
+    Serial.println("Lecturas en tiempo real de sensores (HC-SR04 y TCRT5000) cada 200ms:");
 #endif
 
     transitionTo(STATE_STANDBY);
@@ -122,7 +122,8 @@ void loop() {
     static unsigned long lastSensorDebugPrint = 0;
     if (millis() - lastSensorDebugPrint >= 200) {
         lastSensorDebugPrint = millis();
-        Serial.print("L_Analog: "); Serial.print(lineReadLeftAnalog());
+        Serial.print("Dist: "); Serial.print(distanceRead()); Serial.print(" cm");
+        Serial.print(" | L_Analog: "); Serial.print(lineReadLeftAnalog());
         Serial.print(" | R_Analog: "); Serial.print(lineReadRightAnalog());
         Serial.print(" | L_Line: "); Serial.print(lineReadLeftRaw() ? "BLANCO" : "NEGRO");
         Serial.print(" | R_Line: "); Serial.println(lineReadRightRaw() ? "BLANCO" : "NEGRO");
@@ -267,10 +268,10 @@ void loop() {
                     // Contacto perdido (dist == 0 sin contacto previo cercano, o dist > APPROACH_DISTANCE)
                     // Mantiene velocidad de aproximación frontal mientras dura el tiempo de persistencia
                     motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
-                    lastKnownDist = 0;
                     if (timeLost == 0) {
                         timeLost = millis();
                     } else if (millis() - timeLost > PERSIST_MS) {
+                        lastKnownDist = 0;
                         transitionTo(STATE_SEARCH);
                     }
                 }
@@ -286,13 +287,13 @@ void loop() {
                 unsigned int dist = distanceRead();
                 if (checkLineEmergency()) break;
 
-                if (dist > 0 && dist < ATTACK_RELEASE_DISTANCE) {
-                    timeLost = 0; // Contacto confirmado en rango de ataque
+                if (dist == 0 || dist < ATTACK_RELEASE_DISTANCE) {
+                    timeLost = 0; // Contacto confirmado en rango de ataque o empujando cuerpo a cuerpo en zona ciega (< 2 cm)
                 } else if (dist >= ATTACK_RELEASE_DISTANCE && dist <= APPROACH_DISTANCE) {
                     // El oponente logró separarse: pasamos a aproximación con histéresis
                     transitionTo(STATE_APPROACH);
                 } else {
-                    // dist == 0 (posible zona ciega < 2 cm o rival esquivó) o dist > APPROACH_DISTANCE (fuera de alcance).
+                    // dist > APPROACH_DISTANCE (fuera de alcance / rival esquivó).
                     // Se mantiene la carga por persistencia; si no hay contacto o línea tras PERSIST_MS,
                     // se asume escape y se vuelve a buscar.
                     if (timeLost == 0) {
