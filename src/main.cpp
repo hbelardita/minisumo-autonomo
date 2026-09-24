@@ -41,22 +41,30 @@ bool searchClockwise = true;
 // Dirección del giro de evasión (horario si tocó sensor izquierdo o ambos, antihorario si tocó derecho)
 bool evadeTurnClockwise = true;
 
-// Temporizador para persistencia de ataque (corregido de static local a global de archivo)
+// Temporizador para persistencia de ataque (global de archivo)
 static unsigned long timeLost = 0;
+
+// Última distancia conocida durante aproximación (promovido a ámbito de archivo para persistencia y reseteo entre estados)
+static unsigned int lastKnownDist = 0;
 
 // Realiza la transición de estado y registra el tiempo de inicio
 void transitionTo(State newState) {
-    // Si entramos a buscar desde un estado que no sea evasión, alternamos el sentido del giro respecto a la última vez
-    if (newState == STATE_SEARCH && currentState != STATE_EVADE_TURN) {
+    // Si entramos a buscar tras perder al oponente en combate (aproximación o ataque),
+    // alternamos el sentido del giro respecto a la última vez (no al inicio de partida ni tras evasión)
+    if (newState == STATE_SEARCH && (currentState == STATE_APPROACH || currentState == STATE_ATTACK)) {
         searchClockwise = !searchClockwise;
     }
 
     currentState = newState;
     stateStartTime = millis();
 
-    // CORRECCIÓN: Se limpia el temporizador de pérdida al entrar en estado de ataque o aproximación
-    if (newState == STATE_ATTACK || newState == STATE_APPROACH) {
-        timeLost = 0;
+    // Se limpia el temporizador de pérdida y distancia conocida al cambiar de estado
+    timeLost = 0;
+    lastKnownDist = 0;
+
+    // Inicializa la velocidad en aproximación para no arrastrar el giro residual de búsqueda
+    if (newState == STATE_APPROACH) {
+        motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
     }
 }
 
@@ -229,7 +237,6 @@ void loop() {
         case STATE_APPROACH:
             // Comprobación de distancia con el oponente y aceleración progresiva sin retardos
             {
-                static unsigned int lastKnownDist = 0;
                 unsigned int dist = distanceRead();
                 if (checkLineEmergency()) break;
 
@@ -258,12 +265,13 @@ void loop() {
                     motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
                 } else {
                     // Contacto perdido (dist == 0 sin contacto previo cercano, o dist > APPROACH_DISTANCE)
+                    // Mantiene velocidad de aproximación frontal mientras dura el tiempo de persistencia
+                    motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
                     lastKnownDist = 0;
                     if (timeLost == 0) {
                         timeLost = millis();
                     } else if (millis() - timeLost > PERSIST_MS) {
                         transitionTo(STATE_SEARCH);
-                        timeLost = 0;
                     }
                 }
             }
@@ -278,22 +286,20 @@ void loop() {
                 unsigned int dist = distanceRead();
                 if (checkLineEmergency()) break;
 
-                // Si dist == 0, el HC-SR04 está en su zona ciega (< 2 cm) porque estamos
-                // empujando al rival cuerpo a cuerpo. Se mantiene el ataque a fondo;
-                // la línea blanca detendrá el empuje al llegar al borde del dohyo.
-                if (dist == 0 || (dist > 0 && dist < ATTACK_RELEASE_DISTANCE)) {
-                    timeLost = 0; // Contacto cuerpo a cuerpo o en rango de ataque
-                } else if (dist >= ATTACK_RELEASE_DISTANCE && dist < APPROACH_DISTANCE) {
+                if (dist > 0 && dist < ATTACK_RELEASE_DISTANCE) {
+                    timeLost = 0; // Contacto confirmado en rango de ataque
+                } else if (dist >= ATTACK_RELEASE_DISTANCE && dist <= APPROACH_DISTANCE) {
                     // El oponente logró separarse: pasamos a aproximación con histéresis
                     transitionTo(STATE_APPROACH);
                 } else {
-                    // dist >= APPROACH_DISTANCE: rival fuera de alcance frontal
+                    // dist == 0 (posible zona ciega < 2 cm o rival esquivó) o dist > APPROACH_DISTANCE (fuera de alcance).
+                    // Se mantiene la carga por persistencia; si no hay contacto o línea tras PERSIST_MS,
+                    // se asume escape y se vuelve a buscar.
                     if (timeLost == 0) {
                         timeLost = millis(); // Inicia cuenta de persistencia
                     } else if (millis() - timeLost > PERSIST_MS) {
                         // Vuelve a buscar si pasa el tiempo de persistencia
                         transitionTo(STATE_SEARCH);
-                        timeLost = 0;
                     }
                 }
             }
