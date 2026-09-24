@@ -33,10 +33,39 @@ static void setMotor(uint8_t in1, uint8_t in2, uint8_t pwm, int speed) {
 }
 
 // Establece la velocidad de ambos motores
-void motorsSetSpeed(int leftSpeed, int rightSpeed) {
+void motorsSetSpeed(int rightSpeed, int leftSpeed) {
     digitalWrite(PIN_STBY, HIGH); // Activa el driver
-    setMotor(PIN_AIN1, PIN_AIN2, PIN_PWMA, leftSpeed);
-    setMotor(PIN_BIN1, PIN_BIN2, PIN_PWMB, rightSpeed);
+      int speedA = -rightSpeed;   // Motor A (Derecho)
+  int speedB = -leftSpeed; // Motor B (Izquierdo)
+    // setMotor(PIN_AIN1, PIN_AIN2, PIN_PWMA, leftSpeed);
+    // setMotor(PIN_BIN1, PIN_BIN2, PIN_PWMB, rightSpeed);
+
+  if (speedA > 0)
+  {
+    digitalWrite(PIN_BIN1, HIGH);
+    digitalWrite(PIN_BIN2, LOW);
+  }
+  else
+  {
+    digitalWrite(PIN_BIN1, LOW);
+    digitalWrite(PIN_BIN2, HIGH);
+    speedA = -speedA;
+  }
+
+  if (speedB > 0)
+  {
+    digitalWrite(PIN_AIN1, HIGH);
+    digitalWrite(PIN_AIN2, LOW);
+  }
+  else
+  {
+    digitalWrite(PIN_AIN1, LOW);
+    digitalWrite(PIN_AIN2, HIGH);
+    speedB = -speedB;
+  }
+
+  analogWrite(PIN_PWMA, constrain(speedA, 0, 255));
+  analogWrite(PIN_PWMB, constrain(speedB, 0, 255));
   }
 
   void motorsBrake() {

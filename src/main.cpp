@@ -6,11 +6,11 @@
 // Mapeo físico de pines (definidos en config.h)
 const uint8_t PIN_STBY = 8;
 const uint8_t PIN_AIN1 = 7;
-const uint8_t PIN_AIN2 = 6;
+const uint8_t PIN_AIN2 = 9;
 const uint8_t PIN_PWMA = 5;
 const uint8_t PIN_BIN1 = 4;
 const uint8_t PIN_BIN2 = 2;
-const uint8_t PIN_PWMB = 9;
+const uint8_t PIN_PWMB = 6;
 
 const uint8_t PIN_TRIG = 11;
 const uint8_t PIN_ECHO = 12;
