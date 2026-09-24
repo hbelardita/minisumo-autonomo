@@ -32,8 +32,8 @@ static void setMotor(uint8_t in1, uint8_t in2, uint8_t pwm, int speed) {
     }
 }
 
-// Establece la velocidad de ambos motores
-void motorsSetSpeed(int rightSpeed, int leftSpeed) {
+// Establece la velocidad de ambos motores (izquierdo y derecho)
+void motorsSetSpeed(int leftSpeed, int rightSpeed) {
     digitalWrite(PIN_STBY, HIGH); // Activa el driver
     int speedA = -rightSpeed;     // Canal A: Motor Derecho
     int speedB = -leftSpeed;      // Canal B: Motor Izquierdo
