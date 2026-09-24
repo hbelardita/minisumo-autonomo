@@ -31,10 +31,8 @@ unsigned int distanceRead() {
 
     // Lee la duración del pulso en Echo
     unsigned long duration = pulseIn(PIN_ECHO, HIGH, ULTRASONIC_TIMEOUT);
-    if (duration == 0) {
-        return 0; // Sin obstáculo detectado en el rango configurado
-    }
-    return  duration / 58;
+    lastDistance = (duration == 0) ? 0 : (duration / 58);
+    return lastDistance;
 }
 
 // Lecturas analógicas directas de los sensores de línea
