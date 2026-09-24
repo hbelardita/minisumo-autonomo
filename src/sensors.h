@@ -9,6 +9,10 @@ void sensorsInit();
 // Lee la distancia con el ultrasónico y devuelve el valor en cm (0 si hay timeout)
 unsigned int distanceRead();
 
+// Lecturas analógicas directas de los sensores de línea (0 - 1023)
+int lineReadLeftAnalog();
+int lineReadRightAnalog();
+
 // Verifica el estado del sensor de línea izquierdo con filtro antirrebote
 bool lineReadLeft();
 

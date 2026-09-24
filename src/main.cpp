@@ -99,10 +99,29 @@ void setup() {
     Serial.println("  s : Frenar (Stop)");
 #endif
 
+#ifdef DEBUG_SENSORS
+    Serial.begin(9600);
+    while (!Serial) { ; }
+    Serial.println("--- MODO DEBUG DE SENSORES HABILITADO ---");
+    Serial.println("Lecturas en tiempo real de TCRT5000 cada 200ms:");
+#endif
+
     transitionTo(STATE_STANDBY);
 }
 
 void loop() {
+#ifdef DEBUG_SENSORS
+    static unsigned long lastSensorDebugPrint = 0;
+    if (millis() - lastSensorDebugPrint >= 200) {
+        lastSensorDebugPrint = millis();
+        Serial.print("L_Analog: "); Serial.print(lineReadLeftAnalog());
+        Serial.print(" | R_Analog: "); Serial.print(lineReadRightAnalog());
+        Serial.print(" | L_Line: "); Serial.print(lineReadLeftRaw() ? "BLANCO" : "NEGRO");
+        Serial.print(" | R_Line: "); Serial.println(lineReadRightRaw() ? "BLANCO" : "NEGRO");
+    }
+    return; // Evita el bucle de la máquina de estados si estamos en debug
+#endif
+
 #ifdef DEBUG_MOTORS
     if (Serial.available() > 0) {
         char cmd = Serial.read();

@@ -37,9 +37,20 @@ unsigned int distanceRead() {
     return  duration / 58;
 }
 
+// Lecturas analógicas directas de los sensores de línea
+int lineReadLeftAnalog() {
+    return analogRead(PIN_TCRT_LEFT);
+}
+
+int lineReadRightAnalog() {
+    return analogRead(PIN_TCRT_RIGHT);
+}
+
 // Función auxiliar interna para aplicar filtro antirrebote (debounce) a los TCRT5000
 static bool readLineSensor(uint8_t pin, int &count) {
-    count = (digitalRead(pin) == LOW) ? count + 1 : 0;
+    int val = analogRead(pin);
+    bool detected = LINE_IS_WHITE_LOW ? ((unsigned int)val < LINE_THRESHOLD_ANALOG) : ((unsigned int)val > LINE_THRESHOLD_ANALOG);
+    count = detected ? count + 1 : 0;
     if (count > 2) count = 2;
     return count >= 2;
 }
@@ -58,11 +69,13 @@ bool lineReadRight() {
 
 // Lecturas directas sin debounce para chequeos inmediatos
 bool lineReadLeftRaw() {
-    return digitalRead(PIN_TCRT_LEFT) == LOW;
+    int val = lineReadLeftAnalog();
+    return LINE_IS_WHITE_LOW ? ((unsigned int)val < LINE_THRESHOLD_ANALOG) : ((unsigned int)val > LINE_THRESHOLD_ANALOG);
 }
 
 bool lineReadRightRaw() {
-    return digitalRead(PIN_TCRT_RIGHT) == LOW;
+    int val = lineReadRightAnalog();
+    return LINE_IS_WHITE_LOW ? ((unsigned int)val < LINE_THRESHOLD_ANALOG) : ((unsigned int)val > LINE_THRESHOLD_ANALOG);
 }
 
 // Comprueba estado del botón (activo-bajo)
