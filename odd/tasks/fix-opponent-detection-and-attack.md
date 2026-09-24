@@ -25,3 +25,8 @@ Corregir la detección de oponentes con el sensor HC-SR04, resolver el cruce de 
 - [x] TASK-2: Corrección del cruce de pines de control en `src/motors.cpp`
 - [x] TASK-3: Corrección de lógica de proximidad y transición a `STATE_ATTACK` en `src/main.cpp` y `src/config.h`
 - [x] TASK-4: Compilación y verificación final con `pio run`
+
+## Evidence
+- Commit: `5273eb8` ("fix(combat): fix opponent ultrasonic detection, motor pin mapping, and attack transition")
+- Build check: PlatformIO `pio run` SUCCESS (Flash: 3336 bytes, RAM: 33 bytes)
+
