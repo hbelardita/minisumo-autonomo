@@ -10,9 +10,8 @@ void motorsInit() {
     pinMode(PIN_BIN1, OUTPUT);
     pinMode(PIN_BIN2, OUTPUT);
     pinMode(PIN_PWMB, OUTPUT);
-    
-    // Desactiva el driver por defecto
     digitalWrite(PIN_STBY, LOW);
+
 }
 
 // Función auxiliar interna para configurar cada motor
@@ -38,17 +37,11 @@ void motorsSetSpeed(int leftSpeed, int rightSpeed) {
     digitalWrite(PIN_STBY, HIGH); // Activa el driver
     setMotor(PIN_AIN1, PIN_AIN2, PIN_PWMA, leftSpeed);
     setMotor(PIN_BIN1, PIN_BIN2, PIN_PWMB, rightSpeed);
-}
+  }
 
-// Freno activo (corto circuito a VCC/GND para frenar rápido)
-void motorsBrake() {
-    digitalWrite(PIN_STBY, HIGH);
-    digitalWrite(PIN_AIN1, HIGH);
-    digitalWrite(PIN_AIN2, HIGH);
-    analogWrite(PIN_PWMA, 0);
-    digitalWrite(PIN_BIN1, HIGH);
-    digitalWrite(PIN_BIN2, HIGH);
-    analogWrite(PIN_PWMB, 0);
+  void motorsBrake() {
+    setMotor(PIN_AIN1, PIN_AIN2, PIN_PWMA, 0);
+    setMotor(PIN_BIN1, PIN_BIN2, PIN_PWMB, 0);
 }
 
 // Desactiva el pin STBY para dejar los motores sueltos

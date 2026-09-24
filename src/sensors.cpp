@@ -8,7 +8,6 @@ void sensorsInit() {
     pinMode(PIN_TCRT_LEFT, INPUT);
     pinMode(PIN_TCRT_RIGHT, INPUT);
     pinMode(PIN_BUTTON, INPUT_PULLUP);
-    
     digitalWrite(PIN_TRIG, LOW);
 }
 
@@ -33,12 +32,9 @@ unsigned int distanceRead() {
     // Lee la duración del pulso en Echo
     unsigned long duration = pulseIn(PIN_ECHO, HIGH, ULTRASONIC_TIMEOUT);
     if (duration == 0) {
-        lastDistance = 0; // Sin obstáculo detectado en el rango configurado
-    } else {
-        lastDistance = duration / 58;
+        return 0; // Sin obstáculo detectado en el rango configurado
     }
-    
-    return lastDistance;
+    return  duration / 58;
 }
 
 // Función auxiliar interna para aplicar filtro antirrebote (debounce) a los TCRT5000

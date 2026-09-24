@@ -25,7 +25,6 @@ const uint8_t PIN_LED = 13;
 enum State {
     STATE_STANDBY,
     STATE_SAFETY_DELAY,
-    STATE_INITIAL_TACTIC,
     STATE_SEARCH,
     STATE_APPROACH,
     STATE_ATTACK,
@@ -168,9 +167,6 @@ void loop() {
     // Prioridad 2: Comportamientos de cada estado
     switch (currentState) {
         case STATE_STANDBY:
-            // CORRECCIÓN: Se apaga el driver (Standby) en vez de frenar activamente
-            motorsStandby();
-            digitalWrite(PIN_LED, LOW);
             if (buttonPressed()) {
                 // Espera antirrebote y liberación de botón
                 delay(150);
@@ -184,72 +180,66 @@ void loop() {
             // Parpadea el LED a 5Hz durante la cuenta regresiva
             digitalWrite(PIN_LED, ((millis() - stateStartTime) / BLINK_MS) % 2 ? HIGH : LOW);
 
-            // Al cumplirse los 5 segundos, inicia el combate
+            // Al cumplirse los 5 segundos, inicia el combate pasando directo a búsqueda
             if (millis() - stateStartTime >= SAFETY_MS) {
                 digitalWrite(PIN_LED, HIGH); // LED encendido fijo durante combate
-                transitionTo(STATE_INITIAL_TACTIC);
-            }
-            break;
-
-        case STATE_INITIAL_TACTIC:
-            // Giro inicial horario a velocidad táctica
-            motorsSetSpeed(INITIAL_TACTIC_SPEED, -INITIAL_TACTIC_SPEED);
-
-            // Transiciona si detecta oponente en frente
-            {
-                unsigned int dist = distanceRead();
-                if (checkLineEmergency()) break;
-                if (dist > 0 && dist < ATTACK_DISTANCE) {
-                    transitionTo(STATE_ATTACK);
-                    break;
-                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
-                    transitionTo(STATE_APPROACH);
-                    break;
-                }
-            }
-
-            // Pasa a búsqueda estándar si se agota el tiempo de la táctica
-            if (millis() - stateStartTime >= TACTIC_MS) {
                 transitionTo(STATE_SEARCH);
             }
             break;
 
         case STATE_SEARCH:
-            // Búsqueda en arco continuo alternando la dirección
+            // Giro sobre su propio eje a velocidad SEARCH_SPEED (100)
             if (searchClockwise) {
-                // Arco hacia la derecha: rueda izquierda a máxima velocidad de búsqueda, derecha a la mitad
-                motorsSetSpeed(SEARCH_SPEED, SEARCH_SPEED / 2);
+                motorsSetSpeed(SEARCH_SPEED, -SEARCH_SPEED);
             } else {
-                // Arco hacia la izquierda: rueda izquierda a la mitad, derecha a máxima velocidad de búsqueda
-                motorsSetSpeed(SEARCH_SPEED / 2, SEARCH_SPEED);
+                motorsSetSpeed(-SEARCH_SPEED, SEARCH_SPEED);
             }
 
             // Transiciona si detecta oponente
             {
                 unsigned int dist = distanceRead();
                 if (checkLineEmergency()) break;
-                if (dist > 0 && dist < ATTACK_DISTANCE) {
+                if (dist > 0 && dist <= ATTACK_DISTANCE) {
                     transitionTo(STATE_ATTACK);
-                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
+                } else if (dist > 0 && dist <= APPROACH_DISTANCE) {
                     transitionTo(STATE_APPROACH);
                 }
             }
             break;
 
         case STATE_APPROACH:
-            // Avance recto a velocidad media
-            motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
-
-            // Comprobación de distancia con el oponente
+            // Comprobación de distancia con el oponente y aceleración progresiva sin retardos
             {
+                static unsigned int lastKnownDist = 0;
                 unsigned int dist = distanceRead();
                 if (checkLineEmergency()) break;
-                if (dist > 0 && dist < ATTACK_DISTANCE) {
+
+                if (dist > 0 && dist <= ATTACK_DISTANCE) {
+                    lastKnownDist = dist;
                     transitionTo(STATE_ATTACK);
-                } else if (dist > 0 && dist < APPROACH_DISTANCE) {
-                    timeLost = 0; // Seguimos viéndolo a distancia de approach
+                } else if (dist == 0 && lastKnownDist > 0 && lastKnownDist <= 18) {
+                    // Zona ciega tras aproximación cercana (< 2 cm tras estar a <= 18 cm)
+                    lastKnownDist = 0;
+                    transitionTo(STATE_ATTACK);
+                } else if (dist > 0 && dist <= 18) {
+                    lastKnownDist = dist;
+                    timeLost = 0;
+                    motorsSetSpeed(RAMP_SPEED_18, RAMP_SPEED_18);
+                } else if (dist > 0 && dist <= 25) {
+                    lastKnownDist = dist;
+                    timeLost = 0;
+                    motorsSetSpeed(RAMP_SPEED_25, RAMP_SPEED_25);
+                } else if (dist > 0 && dist <= 30) {
+                    lastKnownDist = dist;
+                    timeLost = 0;
+                    motorsSetSpeed(RAMP_SPEED_30, RAMP_SPEED_30);
+                } else if (dist > 0 && dist <= APPROACH_DISTANCE) {
+                    lastKnownDist = dist;
+                    timeLost = 0;
+                    motorsSetSpeed(APPROACH_SPEED, APPROACH_SPEED);
                 } else {
-                    // Si perdemos contacto
+                    // Contacto perdido (dist == 0 sin contacto previo cercano, o dist > APPROACH_DISTANCE)
+                    lastKnownDist = 0;
                     if (timeLost == 0) {
                         timeLost = millis();
                     } else if (millis() - timeLost > PERSIST_MS) {

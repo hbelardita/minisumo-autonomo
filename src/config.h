@@ -26,10 +26,9 @@ extern const uint8_t PIN_BUTTON;
 extern const uint8_t PIN_LED;
 
 // Umbrales y Tiempos de Calibración
-const unsigned int ATTACK_DISTANCE = 15;           // Distancia en cm para atacar (cuerpo a cuerpo)
-const unsigned int ATTACK_RELEASE_DISTANCE = 20;   // Distancia en cm para salir de ataque hacia aproximación (histéresis)
-const unsigned int APPROACH_DISTANCE = 70;         // Distancia en cm para aproximación (cubre oponentes en dohyo de 77 cm)
-const unsigned long TACTIC_MS = 400;       // Tiempo de giro inicial de la táctica
+const unsigned int ATTACK_DISTANCE = 10;           // Distancia en cm para atacar (cuerpo a cuerpo)
+const unsigned int ATTACK_RELEASE_DISTANCE = 15;   // Distancia en cm para salir de ataque hacia aproximación (histéresis)
+const unsigned int APPROACH_DISTANCE = 60;         // Distancia en cm para aproximación (cubre oponentes en dohyo de 77 cm)
 const unsigned long EVADE_BACKUP_MS = 120; // Micro-retroceso de ~3-5 cm para despejar la pala
 const unsigned long EVADE_TURN_MS = 170;   // Giro puro sobre su eje calibrado a 90°-100°
 const unsigned long PERSIST_MS = 1500;      // Tiempo de persistencia de ataque sin ver al rival
@@ -41,9 +40,11 @@ const unsigned long ULTRASONIC_TIMEOUT = 5000; // Timeout de pulseIn en us (~70c
 const int EVADE_BACKUP_SPEED_L = -180; // Ajustar si curva a la derecha
 const int EVADE_BACKUP_SPEED_R = -180; // Ajustar si curva a la izquierda
 const int EVADE_SPIN_SPEED = 200;
-const int INITIAL_TACTIC_SPEED = 160;
-const int SEARCH_SPEED = 120;
+const int SEARCH_SPEED = 100;
 const int APPROACH_SPEED = 160;
+const int RAMP_SPEED_30 = 200;
+const int RAMP_SPEED_25 = 220;
+const int RAMP_SPEED_18 = 235;
 const int ATTACK_SPEED = 255;
 
 #endif
